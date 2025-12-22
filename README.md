@@ -34,6 +34,20 @@ docker compose up --build
 curl "http://localhost:8000/api/ai/demo?roadmap_id=rm_frontend&tech_slug=react&user_id=user_1"
 ```
 
+## 개별 엔드포인트
+- `GET /api/ai/record-coach`
+- `GET /api/ai/related-roadmaps`
+- `GET /api/ai/tech-cards`
+- `GET /api/ai/tech-fingerprint`
+- `GET /api/ai/comment-digest`
+- `GET /api/ai/comment-duplicates`
+- `GET /api/ai/resource-recommendation`
+- `GET /api/ai/learning-pattern`
+- `GET /api/ai/graph-rag`
+- `GET /api/ai/roadmap-generated`
+- `GET /api/ai/learning-coach`
+- `GET /api/ai/roadmap-recommendation`
+
 ## Swagger 문서
 - OpenAPI JSON: `http://localhost:8000/api/schema/`
 - Swagger UI: `http://localhost:8000/api/docs/`
