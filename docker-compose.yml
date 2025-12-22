@@ -1,10 +1,164 @@
+# =============================================================================
+# Jagalchi AI Server - Docker Compose 설정
+# =============================================================================
+# 개발 및 프로덕션 환경에서 사용할 수 있는 Docker Compose 설정입니다.
+#
+# 개발 환경 실행:
+#   docker-compose up -d
+#   docker-compose logs -f app
+#
+# 프로덕션 환경 실행:
+#   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# 서비스 중지:
+#   docker-compose down
+# =============================================================================
+
 services:
+  # ---------------------------------------------------------------------------
+  # 메인 애플리케이션 서비스
+  # ---------------------------------------------------------------------------
   app:
-    build: .
+    # 이미지 빌드 설정
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development  # 개발 모드로 빌드 (프로덕션: production)
+      args:
+        - BUILDKIT_INLINE_CACHE=1  # 빌드 캐시 최적화
+
+    # 컨테이너 이름 및 호스트명
+    container_name: jagalchi-ai-server
+    hostname: jagalchi-ai
+
+    # 재시작 정책
+    # - unless-stopped: 수동 중지가 아니면 항상 재시작
+    restart: unless-stopped
+
+    # 포트 매핑 (호스트:컨테이너)
     ports:
       - "8000:8000"
+
+    # 환경 변수 파일
     env_file:
       - .env
+
+    # 추가 환경 변수 (env_file보다 우선)
+    environment:
+      # Django 설정
+      - DJANGO_SETTINGS_MODULE=jagalchi_ai.settings
+      - DJANGO_DEBUG=true
+
+      # Python 최적화
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+
+      # 타임존 설정
+      - TZ=Asia/Seoul
+
+    # 볼륨 마운트
     volumes:
-      - .:/app
-    command: python manage.py runserver 0.0.0.0:8000
+      # 소스 코드 마운트 (개발 시 핫 리로드)
+      - .:/app:cached
+
+      # 로그 디렉토리 영속화
+      - jagalchi-logs:/app/logs
+
+      # 데이터베이스 영속화 (SQLite 사용 시)
+      - jagalchi-db:/app/data
+
+      # pip 캐시 (빠른 재빌드)
+      - pip-cache:/root/.cache/pip
+
+    # 개발 서버 실행 명령어
+    command: >
+      python manage.py runserver 0.0.0.0:8000
+
+    # 헬스체크 설정
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    # 리소스 제한 (선택적)
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+    # 로깅 설정
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # 네트워크 설정
+    networks:
+      - jagalchi-network
+
+  # ---------------------------------------------------------------------------
+  # Redis 캐시 서비스 (선택적 - 프로덕션에서 권장)
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: jagalchi-redis
+    restart: unless-stopped
+
+    # 메모리 제한 및 LRU 정책
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+    ports:
+      - "6379:6379"
+
+    volumes:
+      - redis-data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+    networks:
+      - jagalchi-network
+
+    # 기본적으로 비활성화 (필요시 활성화)
+    profiles:
+      - with-redis
+
+# -----------------------------------------------------------------------------
+# 볼륨 정의
+# -----------------------------------------------------------------------------
+volumes:
+  # 로그 데이터 영속화
+  jagalchi-logs:
+    driver: local
+
+  # 데이터베이스 영속화
+  jagalchi-db:
+    driver: local
+
+  # pip 캐시
+  pip-cache:
+    driver: local
+
+  # Redis 데이터
+  redis-data:
+    driver: local
+
+# -----------------------------------------------------------------------------
+# 네트워크 정의
+# -----------------------------------------------------------------------------
+networks:
+  jagalchi-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

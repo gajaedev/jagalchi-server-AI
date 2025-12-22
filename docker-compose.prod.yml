@@ -1,0 +1,75 @@
+# =============================================================================
+# Jagalchi AI Server - 프로덕션 Docker Compose 오버라이드
+# =============================================================================
+# 프로덕션 환경에서 docker-compose.yml과 함께 사용합니다.
+#
+# 실행 방법:
+#   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# 빌드 후 실행:
+#   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# =============================================================================
+
+services:
+  app:
+    # 프로덕션 타겟으로 빌드
+    build:
+      target: production
+
+    # 프로덕션 환경 변수
+    environment:
+      - DJANGO_DEBUG=false
+      - DJANGO_SETTINGS_MODULE=jagalchi_ai.settings
+
+    # 볼륨 오버라이드 (소스 코드 마운트 제거)
+    volumes:
+      - jagalchi-logs:/app/logs
+      - jagalchi-staticfiles:/app/staticfiles
+
+    # Gunicorn 실행 (프로덕션)
+    command: >
+      gunicorn
+      --bind 0.0.0.0:8000
+      --workers 4
+      --worker-class uvicorn.workers.UvicornWorker
+      --timeout 120
+      --graceful-timeout 30
+      --keep-alive 5
+      --max-requests 1000
+      --max-requests-jitter 50
+      --access-logfile -
+      --error-logfile -
+      --capture-output
+      --enable-stdio-inheritance
+      jagalchi_ai.asgi:application
+
+    # 프로덕션 리소스 설정
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  # 프로덕션에서 Redis 활성화
+  redis:
+    profiles: []  # 프로덕션에서는 항상 실행
+
+volumes:
+  jagalchi-staticfiles:
+    driver: local
