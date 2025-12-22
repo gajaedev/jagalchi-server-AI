@@ -40,7 +40,8 @@
 - `cove_verifier`: CoVe 검증 보조
 - `gemini_client`: Gemini LLM 호출(선택)
 - `tavily_client`: Tavily 검색 클라이언트(신뢰 소스 확보)
-- `web_search`: Tavily 검색 스냅샷/캐시 서비스
+- `exa_client`: Exa 검색 클라이언트(신뢰 소스 확보)
+- `web_search`: Tavily/Exa 검색 스냅샷/캐시 서비스
 
 ---
 
@@ -123,7 +124,7 @@
 
 ## 3) Tech Cards (기술 카드)
 ### 파이프라인
-- Fetch(Tavily 검색 + 로컬 스냅샷) → Chunk → Index → REEL Extract → Hybrid Summary → Doc-Watcher → Snapshot
+- Fetch(Tavily/Exa 검색 + 로컬 스냅샷) → Chunk → Index → REEL Extract → Hybrid Summary → Doc-Watcher → Snapshot
 - 소스 해시 동일 시 재생성 금지
 
 ### 스키마
@@ -227,7 +228,7 @@
 
 ## 7) 자료 추천
 ### 파이프라인
-- Tavily 검색을 기본으로 하되, 로컬 스냅샷(BM25 + Vector)을 보조로 사용
+- Tavily/Exa 검색을 기본으로 하되, 로컬 스냅샷(BM25 + Vector)을 보조로 사용
 - 근거 스냅샷으로 추천 이유 확인 가능
 
 ### 스키마
