@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Dict, List, Optional
 
+from .gemini_client import GeminiClient
 from .hashing import stable_hash_json
 from .model_routing import ModelRouter
 from .retrieval import BM25Index, Document, HybridRetriever, VectorRetriever
@@ -20,10 +21,12 @@ class RecordCoachService:
         snapshot_store: Optional[SnapshotStore] = None,
         retriever: Optional[HybridRetriever] = None,
         model_router: Optional[ModelRouter] = None,
+        llm_client: Optional[GeminiClient] = None,
     ) -> None:
         self.snapshot_store = snapshot_store or SnapshotStore()
         self.model_router = model_router or ModelRouter()
         self.retriever = retriever or build_default_retriever()
+        self.llm_client = llm_client or GeminiClient()
 
     def get_feedback(
         self,
@@ -68,7 +71,7 @@ class RecordCoachService:
         followups = _followup_questions(scores)
         next_actions = _next_actions(scores)
 
-        rewrite = _compose_rewrite(record, scores, compose_level, self.model_router)
+        rewrite = _compose_rewrite(record, scores, compose_level, self.model_router, self.llm_client)
 
         payload = {
             "record_id": record.record_id,
@@ -191,6 +194,7 @@ def _compose_rewrite(
     scores: Dict[str, int],
     compose_level: str,
     router: ModelRouter,
+    llm_client: GeminiClient,
 ) -> Dict[str, object]:
     if compose_level == "quick":
         # 빠른 응답 단계에서는 룰 기반으로만 반환한다.
@@ -202,6 +206,16 @@ def _compose_rewrite(
 
     complexity = 1 + int(scores["structure_score"] < 50) + int(scores["specificity_score"] < 40)
     routing = router.route(len(record.memo), complexity)
+
+    if compose_level == "full" and llm_client.available():
+        prompt = _build_record_prompt(record.memo, scores)
+        response = llm_client.generate_json(prompt)
+        if response.data and _valid_rewrite_payload(response.data):
+            return {
+                "model_version": llm_client.model_name,
+                "portfolio_bullets": response.data["portfolio_bullets"],
+                "improved_memo": response.data["improved_memo"],
+            }
 
     bullets = [
         f"문제 상황을 정의하고 해결 방안을 적용해 개선했다 ({scores['quality_score']}점 기반).",
@@ -219,6 +233,23 @@ def _compose_rewrite(
         "portfolio_bullets": bullets,
         "improved_memo": improved,
     }
+
+
+def _build_record_prompt(memo: str, scores: Dict[str, int]) -> str:
+    return (
+        "다음 학습 기록을 포트폴리오 수준으로 개선할 문장을 JSON으로 반환해줘. "
+        "반드시 JSON만 반환하고, 키는 portfolio_bullets(문장 배열)와 improved_memo(한 문장)만 사용해. "
+        f"학습 기록: {memo} "
+        f"점수: {scores} "
+    )
+
+
+def _valid_rewrite_payload(payload: Dict[str, object]) -> bool:
+    if not isinstance(payload.get("portfolio_bullets"), list):
+        return False
+    if not isinstance(payload.get("improved_memo"), str):
+        return False
+    return True
 
 
 def _to_evidence_payload(items: List[RetrievalItem]) -> List[Dict[str, str]]:

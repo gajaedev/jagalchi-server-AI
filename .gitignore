@@ -25,6 +25,9 @@ media/
 .firebase/
 firebase-debug.log
 
+# Env
+.env
+
 # Editor
 .vscode/
 .idea/
