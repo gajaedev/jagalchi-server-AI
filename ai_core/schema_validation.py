@@ -113,21 +113,34 @@ def validate_learning_coach_output(payload: Dict[str, Any]) -> None:
         "question",
         "intent",
         "toolchain",
+        "plan",
         "answer",
         "retrieval_evidence",
+        "behavior_summary",
         "model_version",
         "prompt_version",
         "created_at",
         "cache_hit",
     ])
     _require_types(payload["toolchain"], list, "toolchain")
+    _require_types(payload["plan"], list, "plan")
     _require_types(payload["retrieval_evidence"], list, "retrieval_evidence")
+    _require_types(payload["behavior_summary"], dict, "behavior_summary")
 
 
 def validate_roadmap_recommendation_output(payload: Dict[str, Any]) -> None:
-    _require_fields(payload, ["roadmap_id", "target_role", "nodes", "edges", "model_version", "created_at"])
+    _require_fields(payload, [
+        "roadmap_id",
+        "target_role",
+        "nodes",
+        "edges",
+        "gnn_predictions",
+        "model_version",
+        "created_at",
+    ])
     _require_types(payload["nodes"], list, "nodes")
     _require_types(payload["edges"], list, "edges")
+    _require_types(payload["gnn_predictions"], dict, "gnn_predictions")
 
 
 def validate_insights_output(payload: Dict[str, Any]) -> None:

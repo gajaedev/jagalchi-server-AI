@@ -5,12 +5,14 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 from .mock_data import EVENT_LOGS
+from .survival_analysis import CoxModel
 from .types import EventLog
 
 
 class BehaviorModel:
     def __init__(self, events: Optional[List[EventLog]] = None) -> None:
         self._events = events or EVENT_LOGS
+        self._cox = CoxModel()
 
     def assess(self, user_id: str, days: int = 30) -> Dict[str, object]:
         cutoff = datetime.utcnow() - timedelta(days=days)
@@ -18,10 +20,12 @@ class BehaviorModel:
         motivation = _motivation_score(events, days)
         ability = _ability_score(events)
         prompt_hour = _best_prompt_hour(events)
+        dropout_risk = self._cox.hazard({"motivation": motivation, "ability": ability, "gap": 0.2})
         return {
             "motivation": round(motivation, 2),
             "ability": round(ability, 2),
             "prompt_hour": prompt_hour,
+            "dropout_risk": round(dropout_risk, 4),
         }
 
 

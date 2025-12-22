@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Dict, List, Optional
 
 from .gemini_client import GeminiClient
+from .code_feedback import analyze_code
 from .hashing import stable_hash_json
 from .model_routing import ModelRouter
 from .retrieval import BM25Index, Document, HybridRetriever, VectorRetriever
@@ -72,6 +73,7 @@ class RecordCoachService:
         next_actions = _next_actions(scores)
 
         rewrite = _compose_rewrite(record, scores, compose_level, self.model_router, self.llm_client)
+        code_feedback = _maybe_code_feedback(record.memo)
 
         payload = {
             "record_id": record.record_id,
@@ -85,6 +87,7 @@ class RecordCoachService:
                 "portfolio_bullets": rewrite["portfolio_bullets"],
                 "improved_memo": rewrite["improved_memo"],
             },
+            "code_feedback": code_feedback,
             "next_actions": next_actions,
             "followup_questions": followups,
             "retrieval_evidence": _to_evidence_payload(evidence),
@@ -261,3 +264,12 @@ def _to_evidence_payload(items: List[RetrievalItem]) -> List[Dict[str, str]]:
             "snippet": item.snippet,
         })
     return payload
+
+
+def _maybe_code_feedback(memo: str) -> Dict[str, object]:
+    if "```" not in memo:
+        return {}
+    code = memo.split("```")
+    if len(code) < 2:
+        return {}
+    return analyze_code(code[1])

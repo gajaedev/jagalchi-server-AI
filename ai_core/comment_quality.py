@@ -74,11 +74,25 @@ class CommentQualityService:
         score += len(tokens & positive_words) * 0.1
         return round(score, 2)
 
+    def aspect_sentiment(self, comment_text: str) -> Dict[str, float]:
+        aspects = {
+            "content": ["내용", "설명", "문서", "가이드"],
+            "difficulty": ["난이도", "어렵", "쉬움", "hard", "easy"],
+            "speed": ["속도", "느림", "빠름", "latency"],
+        }
+        sentiments = {}
+        for aspect, keywords in aspects.items():
+            if any(keyword in comment_text.lower() for keyword in keywords):
+                sentiments[aspect] = self.sentiment_score(comment_text)
+        return sentiments
+
     def moderate(self, comment_text: str, tech_text: str) -> Dict[str, object]:
         relevant = self.check_relevance(comment_text, tech_text)
         sentiment = self.sentiment_score(comment_text)
+        aspects = self.aspect_sentiment(comment_text)
         return {
             "is_irrelevant": not relevant,
             "toxicity_score": max(-sentiment, 0.0),
+            "aspect_sentiment": aspects,
             "action": "flag" if not relevant or sentiment < -0.3 else "allow",
         }

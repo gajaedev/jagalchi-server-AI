@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, List, Optional, Set
 
+from .gnn import GraphSAGE
 from .mock_data import ROLE_REQUIREMENTS, USER_MASTERED_SKILLS, USER_PREFERENCES
 from .types import Roadmap
 
@@ -96,6 +97,7 @@ class RoadmapRecommendationService:
     def __init__(self, roadmaps: Dict[str, Roadmap]) -> None:
         self._roadmaps = roadmaps
         self._ontology = build_ontology(roadmaps)
+        self._gnn = GraphSAGE()
 
     def recommend(
         self,
@@ -111,6 +113,7 @@ class RoadmapRecommendationService:
         ordered = _filter_soft_nodes(ordered, self._ontology, preferred_tags)
 
         ordered = _insert_review_nodes(ordered, adapt_failures or [])
+        gnn_predictions = self._predict_with_gnn(ordered)
 
         node_payload = []
         for node_id in ordered:
@@ -122,9 +125,19 @@ class RoadmapRecommendationService:
             "target_role": target_role,
             "nodes": node_payload,
             "edges": _extract_edges(ordered, self._ontology.edges),
+            "gnn_predictions": gnn_predictions,
             "model_version": "roadmap_graph_v1",
             "created_at": datetime.utcnow().isoformat(),
         }
+
+    def _predict_with_gnn(self, ordered: List[str]) -> Dict[str, List[str]]:
+        node_text = {node_id: " ".join(self._ontology.node_tags.get(node_id, [])) for node_id in ordered}
+        adjacency = _build_adjacency(self._ontology.edges)
+        embeddings = self._gnn.embed(node_text, adjacency)
+        predictions = {}
+        for node_id in ordered[:3]:
+            predictions[node_id] = self._gnn.predict_next(node_id, embeddings, adjacency, top_k=2)
+        return predictions
 
 
 def build_ontology(roadmaps: Dict[str, Roadmap]) -> GraphOntology:
@@ -173,6 +186,15 @@ def _extract_edges(ordered: List[str], edges: List[GraphEdge]) -> List[Dict[str,
         if edge.source in node_set and edge.target in node_set:
             payload.append({"source": edge.source, "target": edge.target, "type": edge.edge_type})
     return payload
+
+
+def _build_adjacency(edges: List[GraphEdge]) -> Dict[str, List[str]]:
+    adjacency: Dict[str, List[str]] = {}
+    for edge in edges:
+        if edge.edge_type not in {"hard", "soft"}:
+            continue
+        adjacency.setdefault(edge.source, []).append(edge.target)
+    return adjacency
 
 
 def _preference_score(tags: List[str], preferred: List[str]) -> float:

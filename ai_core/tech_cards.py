@@ -6,7 +6,10 @@ from typing import Dict, List, Optional
 from .hashing import stable_hash_json
 from dataclasses import dataclass
 
+from .doc_watcher import DocWatcher
+from .reel_pipeline import ReelPipeline
 from .snapshot import SnapshotStore
+from .summarization import map_reduce_summary
 from .text_utils import cheap_embed, extractive_summary
 from .mock_data import COMMON_PITFALLS, TECH_SOURCES
 from .vector_store import InMemoryVectorStore, VectorItem
@@ -32,6 +35,8 @@ class SourceChunk:
 class TechCardService:
     def __init__(self, snapshot_store: Optional[SnapshotStore] = None) -> None:
         self.snapshot_store = snapshot_store or SnapshotStore()
+        self._reel = ReelPipeline()
+        self._doc_watcher = DocWatcher()
 
     def get_or_create(self, tech_slug: str, prompt_version: str = "tech_card_v1") -> Dict[str, object]:
         sources = TECH_SOURCES.get(tech_slug, [])
@@ -48,8 +53,10 @@ class TechCardService:
         merged = " ".join(source["content"] for source in sources)
         chunks = self._chunk_sources(tech_slug, sources)
         _ = self._index_chunks(chunks)
-        summary = extractive_summary(merged, max_sentences=2)
+        summary = map_reduce_summary([source["content"] for source in sources])
         pitfalls = COMMON_PITFALLS.get(tech_slug, [])
+        reel = self._reel.extract(sources)
+        change_summary = self._detect_changes(sources)
 
         latest_fetch = max((source["fetched_at"] for source in sources), default="2025-01-01")
         payload = {
@@ -75,13 +82,15 @@ class TechCardService:
                 {"stage": "practice", "items": ["작은 기능 단위 프로젝트", "성능/품질 개선"]},
             ],
             "metadata": {
-                "language": "unknown",
-                "license": "unknown",
-                "latest_version": latest_fetch,
+                "language": reel.metadata.get("language") or "unknown",
+                "license": reel.metadata.get("license") or "unknown",
+                "latest_version": reel.metadata.get("latest_version") or latest_fetch,
                 "last_updated": latest_fetch,
             },
             "relationships": {"based_on": [], "alternatives": _ALTERNATIVE_MAP.get(tech_slug, [])},
             "reliability_metrics": {"community_score": 80, "doc_freshness": 90},
+            "latest_changes": change_summary,
+            "reel_evidence": reel.evidence,
             "sources": [
                 {"title": source["title"], "url": source["url"], "fetched_at": source["fetched_at"]}
                 for source in sources
@@ -92,6 +101,14 @@ class TechCardService:
             },
         }
         return payload
+
+    def _detect_changes(self, sources: List[Dict[str, str]]) -> Dict[str, object]:
+        if len(sources) < 2:
+            return {"changed": False, "change_ratio": 0.0, "summary": ""}
+        before = sources[0]["content"]
+        after = sources[-1]["content"]
+        change = self._doc_watcher.semantic_diff(before, after)
+        return {"changed": change.changed, "change_ratio": change.change_ratio, "summary": change.summary}
 
     def _chunk_sources(self, tech_slug: str, sources: List[Dict[str, str]], chunk_size: int = 120) -> List[SourceChunk]:
         chunks: List[SourceChunk] = []

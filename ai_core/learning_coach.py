@@ -9,6 +9,7 @@ from .graph_rag import GraphRAGService
 from .progress_tracking import ProgressTrackingService
 from .resource_recommender import ResourceRecommendationService
 from .semantic_cache import SemanticCache
+from .state_workflow import SimpleWorkflow
 from .text_utils import extractive_summary
 
 
@@ -21,6 +22,7 @@ class LearningCoachService:
         cache: Optional[SemanticCache] = None,
         llm_client: Optional[GeminiClient] = None,
         behavior_model: Optional[BehaviorModel] = None,
+        workflow: Optional[SimpleWorkflow] = None,
     ) -> None:
         self._graph_rag = graph_rag or GraphRAGService()
         self._resource_recommender = resource_recommender or ResourceRecommendationService()
@@ -28,6 +30,7 @@ class LearningCoachService:
         self._cache = cache or SemanticCache()
         self._llm_client = llm_client or GeminiClient()
         self._behavior_model = behavior_model or BehaviorModel()
+        self._workflow = workflow or SimpleWorkflow()
 
     def answer(
         self,
@@ -39,11 +42,13 @@ class LearningCoachService:
         cache_key = {"user_level": user_level}
         cached = self._cache.get(question, metadata=cache_key)
         if cached:
+            plan = self._workflow.run(user_id, "cached", ["semantic_cache"])
             return {
                 "user_id": user_id,
                 "question": question,
                 "intent": "cached",
                 "toolchain": ["semantic_cache"],
+                "plan": plan,
                 "answer": cached.answer,
                 "retrieval_evidence": [],
                 "behavior_summary": self._behavior_model.assess(user_id),
@@ -83,12 +88,14 @@ class LearningCoachService:
 
         final_answer = extractive_summary(answer, max_sentences=2)
         self._cache.set(question, final_answer, metadata=cache_key)
+        plan = self._workflow.run(user_id, intent, toolchain)
 
         return {
             "user_id": user_id,
             "question": question,
             "intent": intent,
             "toolchain": toolchain,
+            "plan": plan,
             "answer": final_answer,
             "retrieval_evidence": evidence,
             "behavior_summary": self._behavior_model.assess(user_id),

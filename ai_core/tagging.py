@@ -4,7 +4,7 @@ from collections import defaultdict
 from typing import Dict, List, Optional
 
 from .mock_data import TAG_HIERARCHY, TECH_STACKS
-from .text_utils import tokenize
+from .text_utils import cheap_embed, cosine_similarity, tokenize
 
 
 class TagGraph:
@@ -42,11 +42,18 @@ class AutoTagger:
     def tag_text(self, text: str) -> List[Dict[str, object]]:
         tokens = tokenize(text)
         lowered = text.lower()
+        text_vec = cheap_embed(text)
         tags = []
         for tech in TECH_STACKS.values():
             hits = sum(tokens.count(alias.lower()) for alias in tech.aliases)
             if hits == 0:
                 hits = sum(1 for alias in tech.aliases if alias.lower() in lowered)
+            if hits == 0:
+                alias_scores = [
+                    cosine_similarity(text_vec, cheap_embed(alias)) for alias in tech.aliases
+                ]
+                if alias_scores and max(alias_scores) >= 0.6:
+                    hits = 1
             if hits == 0:
                 continue
             confidence = min(0.5 + hits / max(len(tokens), 1), 1.0)
