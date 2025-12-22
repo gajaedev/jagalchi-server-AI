@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.eggs/
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Django
+*.log
+*.pot
+*.sqlite3
+staticfiles/
+media/
+
+# OS
+.DS_Store
+
+# Local tools
+.firebase/
+firebase-debug.log
+
+# Editor
+.vscode/
+.idea/
