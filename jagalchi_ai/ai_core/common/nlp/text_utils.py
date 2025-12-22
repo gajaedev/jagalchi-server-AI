@@ -1,11 +1,12 @@
-import math
 import re
 from collections import Counter
 from typing import Iterable, List
 
+from sklearn.feature_extraction.text import HashingVectorizer
 
 _WORD_RE = re.compile(r"[\w\-\+\.]+", re.UNICODE)
 _SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
+_VECTORIZER_CACHE: dict[int, HashingVectorizer] = {}
 
 
 def normalize_text(text: str) -> str:
@@ -34,8 +35,8 @@ def cosine_similarity(vec_a: List[float], vec_b: List[float]) -> float:
     if not vec_a or not vec_b or len(vec_a) != len(vec_b):
         return 0.0
     dot = sum(a * b for a, b in zip(vec_a, vec_b))
-    norm_a = math.sqrt(sum(a * a for a in vec_a))
-    norm_b = math.sqrt(sum(b * b for b in vec_b))
+    norm_a = sum(a * a for a in vec_a) ** 0.5
+    norm_b = sum(b * b for b in vec_b) ** 0.5
     if norm_a == 0.0 or norm_b == 0.0:
         return 0.0
     return dot / (norm_a * norm_b)
@@ -61,14 +62,24 @@ def extractive_summary(text: str, max_sentences: int = 2) -> str:
 
 
 def cheap_embed(text: str, dim: int = 32) -> List[float]:
-    tokens = tokenize(text)
-    if not tokens:
+    if not text.strip():
         return [0.0] * dim
-    vector = [0.0] * dim
-    for token in tokens:
-        idx = hash(token) % dim
-        vector[idx] += 1.0
-    norm = math.sqrt(sum(v * v for v in vector))
-    if norm == 0.0:
-        return vector
-    return [v / norm for v in vector]
+    vectorizer = _get_vectorizer(dim)
+    dense = vectorizer.transform([text]).toarray()
+    return dense[0].tolist() if len(dense) else [0.0] * dim
+
+
+def _get_vectorizer(dim: int) -> HashingVectorizer:
+    cached = _VECTORIZER_CACHE.get(dim)
+    if cached:
+        return cached
+    vectorizer = HashingVectorizer(
+        n_features=dim,
+        alternate_sign=False,
+        norm="l2",
+        tokenizer=tokenize,
+        token_pattern=None,
+        lowercase=False,
+    )
+    _VECTORIZER_CACHE[dim] = vectorizer
+    return vectorizer

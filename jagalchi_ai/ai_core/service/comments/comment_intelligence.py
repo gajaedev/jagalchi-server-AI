@@ -4,9 +4,11 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
-from jagalchi_ai.ai_core.common.nlp.text_utils import cheap_embed, jaccard_similarity, tokenize
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.feature_extraction.text import TfidfVectorizer
+
 from jagalchi_ai.ai_core.domain.comment import Comment
-from jagalchi_ai.ai_core.repository.in_memory_vector_store import InMemoryVectorStore
 from jagalchi_ai.ai_core.repository.mock_data import COMMENTS
 
 
@@ -15,15 +17,21 @@ class CommentIntelligenceService:
 
     def __init__(self, comments: Optional[List[Comment]] = None) -> None:
         self._comments = comments or COMMENTS
-        self._vector_store = InMemoryVectorStore()
+        self._vectorizer = TfidfVectorizer()
+        self._matrix = None
         self._index_comments()
 
     def duplicate_suggest(self, roadmap_id: str, query: str, top_k: int = 3) -> List[Dict[str, object]]:
-        vector = cheap_embed(query)
-        items = self._vector_store.query(vector, top_k=top_k, filters={"roadmap_id": roadmap_id})
+        roadmap_indices = [idx for idx, c in enumerate(self._comments) if c.roadmap_id == roadmap_id]
+        if not roadmap_indices or self._matrix is None:
+            return []
+        query_vec = self._vectorizer.transform([query])
+        subset = self._matrix[roadmap_indices]
+        scores = cosine_similarity(query_vec, subset).flatten()
+        ranked = sorted(zip(roadmap_indices, scores), key=lambda pair: pair[1], reverse=True)[:top_k]
         return [
-            {"comment_id": item.item_id, "snippet": item.metadata.get("snippet", "")}
-            for item in items
+            {"comment_id": self._comments[idx].comment_id, "snippet": self._comments[idx].body}
+            for idx, _score in ranked
         ]
 
     def comment_digest(self, roadmap_id: str, period_days: int = 14) -> Dict[str, object]:
@@ -42,31 +50,31 @@ class CommentIntelligenceService:
         }
 
     def _index_comments(self) -> None:
-        for comment in self._comments:
-            vector = cheap_embed(comment.body)
-            self._vector_store.upsert(
-                comment.comment_id,
-                vector=vector,
-                metadata={"roadmap_id": comment.roadmap_id, "snippet": comment.body},
-            )
+        if not self._comments:
+            self._matrix = None
+            return
+        corpus = [comment.body for comment in self._comments]
+        self._matrix = self._vectorizer.fit_transform(corpus)
 
 
-def _cluster_comments(comments: List[Comment], threshold: float = 0.4) -> List[List[Comment]]:
-    clusters: List[List[Comment]] = []
-    for comment in comments:
-        tokens = tokenize(comment.body)
-        placed = False
-        for cluster in clusters:
-            rep = cluster[0]
-            # 대표 문장과의 유사도로 간단히 클러스터링한다.
-            similarity = jaccard_similarity(tokens, tokenize(rep.body))
-            if similarity >= threshold:
-                cluster.append(comment)
-                placed = True
-                break
-        if not placed:
-            clusters.append([comment])
-    clusters.sort(key=lambda c: len(c), reverse=True)
+def _cluster_comments(comments: List[Comment]) -> List[List[Comment]]:
+    if len(comments) <= 1:
+        return [comments] if comments else []
+    corpus = [comment.body for comment in comments]
+    vectorizer = TfidfVectorizer()
+    vectors = vectorizer.fit_transform(corpus).toarray()
+    clustering = AgglomerativeClustering(
+        n_clusters=None,
+        distance_threshold=0.8,
+        metric="cosine",
+        linkage="average",
+    )
+    labels = clustering.fit_predict(vectors)
+    grouped: Dict[int, List[Comment]] = defaultdict(list)
+    for label, comment in zip(labels, comments):
+        grouped[int(label)].append(comment)
+    clusters = list(grouped.values())
+    clusters.sort(key=lambda group: len(group), reverse=True)
     return clusters
 
 

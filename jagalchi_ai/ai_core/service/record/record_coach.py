@@ -5,20 +5,21 @@ from typing import Dict, List, Optional
 
 from jagalchi_ai.ai_core.client import GeminiClient
 from jagalchi_ai.ai_core.common.hashing import stable_hash_json
-from jagalchi_ai.ai_core.common.nlp.text_utils import cheap_embed, extractive_summary
+from jagalchi_ai.ai_core.common.nlp.text_utils import extractive_summary
 from jagalchi_ai.ai_core.config.model_router import ModelRouter
 from jagalchi_ai.ai_core.domain.document import Document
 from jagalchi_ai.ai_core.domain.learning_record import LearningRecord
 from jagalchi_ai.ai_core.domain.retrieval_item import RetrievalItem
 from jagalchi_ai.ai_core.domain.roadmap_node import RoadmapNode
-from jagalchi_ai.ai_core.repository.in_memory_vector_store import InMemoryVectorStore
 from jagalchi_ai.ai_core.repository.mock_data import COMMON_PITFALLS, GOOD_RECORD_EXAMPLES, TECH_SOURCES
 from jagalchi_ai.ai_core.repository.snapshot_store import SnapshotStore
 from jagalchi_ai.ai_core.service.record.code_feedback import analyze_code
 from jagalchi_ai.ai_core.service.record.rubric import score_record
 from jagalchi_ai.ai_core.service.retrieval.bm25_index import BM25Index
 from jagalchi_ai.ai_core.service.retrieval.hybrid_retriever import HybridRetriever
-from jagalchi_ai.ai_core.service.retrieval.vector_retriever import VectorRetriever
+from langchain_community.embeddings.fake import FakeEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_core.documents import Document as LangchainDocument
 
 
 class RecordCoachService:
@@ -103,9 +104,6 @@ class RecordCoachService:
 
 
 def build_default_retriever() -> HybridRetriever:
-    bm25 = BM25Index()
-    vector_store = InMemoryVectorStore()
-
     documents: List[Document] = []
 
     for slug, sources in TECH_SOURCES.items():
@@ -118,7 +116,6 @@ def build_default_retriever() -> HybridRetriever:
                 metadata={"source": "tech_card", "slug": slug, "snippet": extractive_summary(content)},
             )
         )
-        vector_store.upsert(doc_id, vector=cheap_embed(content), metadata={"source": "tech_card", "snippet": content})
 
     for slug, pitfalls in COMMON_PITFALLS.items():
         for idx, pitfall in enumerate(pitfalls):
@@ -141,11 +138,27 @@ def build_default_retriever() -> HybridRetriever:
             )
         )
 
+    bm25 = BM25Index()
     bm25.add_documents(documents)
 
-    vector_retriever = VectorRetriever(vector_store)
+    langchain_docs = [
+        LangchainDocument(
+            page_content=doc.text,
+            metadata={**doc.metadata, "doc_id": doc.doc_id, "snippet": extractive_summary(doc.text)},
+        )
+        for doc in documents
+    ]
+    embeddings = FakeEmbeddings(size=32)
+    vector_store = FAISS.from_documents(langchain_docs, embeddings)
+    vector_retriever = vector_store.as_retriever(search_kwargs={"k": 5})
+
+    retrievers = []
+    if bm25.retriever:
+        retrievers.append(("bm25", bm25.retriever))
+    retrievers.append(("vector", vector_retriever))
+
     hybrid = HybridRetriever(
-        retrievers=[("bm25", bm25.search), ("vector", vector_retriever.search)],
+        retrievers=retrievers,
         weights={"bm25": 1.0, "vector": 0.5},
     )
     return hybrid

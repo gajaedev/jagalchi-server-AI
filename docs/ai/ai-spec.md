@@ -15,7 +15,7 @@
 - `common/schema_validation`: 스키마 검증
 - `repository/snapshot_store`: 스냅샷 캐시 저장
 - `repository/vector_store`: in-memory 벡터 스토어 인터페이스
-- `service/retrieval`: BM25 + Vector + Graph 하이브리드
+- `service/retrieval`: LangChain BM25Retriever + FAISS 기반 하이브리드
 - `service/recommendation/ranking`: 연관 로드맵 랭킹 가중치
 - `config/model_router`: 작은 모델 우선 라우팅
 - `service/graph/graph_rag`: 그래프 기반 근거 수집

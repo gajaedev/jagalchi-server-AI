@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from jagalchi_ai.ai_core.common.schema_validation import (
@@ -17,8 +18,12 @@ class ExtendedSchemaTests(unittest.TestCase):
         validate_roadmap_generation_output(payload)
 
     def test_resource_recommendation_schema(self) -> None:
-        service = ResourceRecommendationService()
-        payload = service.recommend("React hooks", top_k=2)
+        os.environ["AI_DISABLE_EXTERNAL"] = "true"
+        try:
+            service = ResourceRecommendationService()
+            payload = service.recommend("React hooks", top_k=2)
+        finally:
+            os.environ.pop("AI_DISABLE_EXTERNAL", None)
         validate_resource_recommendation_output(payload)
 
     def test_learning_pattern_schema(self) -> None:

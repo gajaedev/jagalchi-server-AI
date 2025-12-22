@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import os
 from typing import Dict, List, Optional
 
 from jagalchi_ai.ai_core.client import ExaSearchClient, TavilySearchClient
@@ -21,6 +22,8 @@ class WebSearchService:
         self._snapshot_store = snapshot_store or SnapshotStore()
 
     def available(self) -> bool:
+        if os.getenv("AI_DISABLE_EXTERNAL") == "true":
+            return False
         return self._tavily.available() or self._exa.available()
 
     def search(self, query: str, top_k: int = 5) -> List[Dict[str, object]]:

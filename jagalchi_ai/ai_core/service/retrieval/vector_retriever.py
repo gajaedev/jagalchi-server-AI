@@ -19,12 +19,12 @@ class VectorRetriever:
         filters = {"namespace": self._namespace} if self._namespace else None
         items = self._store.query(vector, top_k=top_k, filters=filters)
         results = []
-        for item in items:
+        for idx, item in enumerate(items):
             results.append(
                 RetrievalItem(
                     source=item.metadata.get("source", "vector"),
                     item_id=item.item_id,
-                    score=1.0,
+                    score=1.0 / (idx + 1),
                     snippet=item.metadata.get("snippet", ""),
                     metadata=item.metadata,
                 )

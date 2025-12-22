@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-import json
 import os
 from typing import List, Optional
-from urllib import request
 
+try:
+    from tavily import TavilyClient
+except ImportError:  # pragma: no cover - optional dependency
+    TavilyClient = None
 
 from jagalchi_ai.ai_core.client.tavily_result import TavilyResult
 
@@ -15,29 +17,30 @@ class TavilySearchClient:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        endpoint: str = "https://api.tavily.com/search",
         timeout: int = 10,
     ) -> None:
         self._api_key = api_key or os.getenv("TAVILY_API_KEY", "")
-        self._endpoint = endpoint
         self._timeout = timeout
+        self._client = None
+        if self._api_key and TavilyClient is not None:
+            self._client = TavilyClient(api_key=self._api_key)
 
     def available(self) -> bool:
-        return bool(self._api_key)
+        return self._client is not None
 
     def search(self, query: str, max_results: int = 5, include_raw_content: bool = False) -> List[TavilyResult]:
         if not self.available():
             return []
-        payload = {
-            "api_key": self._api_key,
-            "query": query,
-            "max_results": max_results,
-            "include_raw_content": include_raw_content,
-            "include_answer": False,
-            "include_images": False,
-        }
-        raw = self._post_json(payload)
-        if not raw:
+        try:
+            raw = self._client.search(
+                query=query,
+                max_results=max_results,
+                include_raw_content=include_raw_content,
+                include_answer=False,
+                include_images=False,
+                search_depth="basic",
+            )
+        except Exception:
             return []
         results = []
         for item in raw.get("results", []) or []:
@@ -63,20 +66,3 @@ class TavilySearchClient:
                 )
             )
         return results
-
-    def _post_json(self, payload: dict) -> Optional[dict]:
-        data = json.dumps(payload).encode("utf-8")
-        req = request.Request(
-            self._endpoint,
-            data=data,
-            headers={"Content-Type": "application/json"},
-        )
-        try:
-            with request.urlopen(req, timeout=self._timeout) as response:
-                raw = response.read().decode("utf-8")
-        except Exception:
-            return None
-        try:
-            return json.loads(raw)
-        except json.JSONDecodeError:
-            return None

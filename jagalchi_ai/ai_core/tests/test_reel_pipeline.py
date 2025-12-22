@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from jagalchi_ai.ai_core.service.tech.reel_pipeline import ReelPipeline
@@ -8,8 +9,12 @@ class ReelPipelineTests(unittest.TestCase):
         sources = [
             {"title": "Doc", "content": "License: MIT v1.2.3 Language: Python", "fetched_at": "2025-01-01"}
         ]
-        pipeline = ReelPipeline()
-        result = pipeline.extract(sources)
+        os.environ["AI_DISABLE_LLM"] = "true"
+        try:
+            pipeline = ReelPipeline()
+            result = pipeline.extract(sources)
+        finally:
+            os.environ.pop("AI_DISABLE_LLM", None)
         self.assertIn("license", result.metadata)
 
 

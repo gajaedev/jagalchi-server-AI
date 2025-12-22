@@ -23,6 +23,7 @@ class GeminiClient:
         self._api_key = api_key or os.getenv("GEMINI_API_KEY", "")
         self._model = model
         self._client = None
+        self._disabled = os.getenv("AI_DISABLE_LLM") == "true" or os.getenv("AI_DISABLE_EXTERNAL") == "true"
         if self._api_key and genai is not None:
             self._client = genai.Client(api_key=self._api_key)
 
@@ -31,12 +32,15 @@ class GeminiClient:
         return self._model
 
     def available(self) -> bool:
-        return self._client is not None
+        return self._client is not None and not self._disabled
 
     def generate_text(self, contents: str) -> str:
         if not self.available():
             return ""
-        response = self._client.models.generate_content(model=self._model, contents=contents)
+        try:
+            response = self._client.models.generate_content(model=self._model, contents=contents)
+        except Exception:
+            return ""
         return getattr(response, "text", "") or ""
 
     def generate_json(self, contents: str) -> GeminiResponse:

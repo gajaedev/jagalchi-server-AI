@@ -4,15 +4,16 @@ from datetime import datetime
 from typing import Dict, List, Optional
 
 from jagalchi_ai.ai_core.common.hashing import stable_hash_json
-from jagalchi_ai.ai_core.common.nlp.text_utils import cheap_embed, extractive_summary
+from jagalchi_ai.ai_core.common.nlp.text_utils import extractive_summary
 from jagalchi_ai.ai_core.domain.document import Document
-from jagalchi_ai.ai_core.repository.in_memory_vector_store import InMemoryVectorStore
 from jagalchi_ai.ai_core.repository.mock_data import TECH_SOURCES
 from jagalchi_ai.ai_core.repository.snapshot_store import SnapshotStore
 from jagalchi_ai.ai_core.service.retrieval.bm25_index import BM25Index
 from jagalchi_ai.ai_core.service.retrieval.hybrid_retriever import HybridRetriever
-from jagalchi_ai.ai_core.service.retrieval.vector_retriever import VectorRetriever
 from jagalchi_ai.ai_core.service.retrieval.web_search_service import WebSearchService
+from langchain_community.embeddings.fake import FakeEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_core.documents import Document as LangchainDocument
 
 
 class ResourceRecommendationService:
@@ -81,7 +82,6 @@ class ResourceRecommendationService:
 
     def _build_retriever(self) -> HybridRetriever:
         bm25 = BM25Index()
-        vector_store = InMemoryVectorStore()
         documents: List[Document] = []
         for tech_slug, sources in TECH_SOURCES.items():
             for idx, source in enumerate(sources):
@@ -99,21 +99,26 @@ class ResourceRecommendationService:
                         },
                     )
                 )
-                vector_store.upsert(
-                    doc_id,
-                    vector=cheap_embed(text),
-                    metadata={
-                        "source": "resource",
-                        "title": source["title"],
-                        "url": source["url"],
-                        "snippet": extractive_summary(text),
-                    },
-                )
 
         bm25.add_documents(documents)
-        vector_retriever = VectorRetriever(vector_store)
+        langchain_docs = [
+            LangchainDocument(
+                page_content=doc.text,
+                metadata={**doc.metadata, "doc_id": doc.doc_id, "snippet": extractive_summary(doc.text)},
+            )
+            for doc in documents
+        ]
+        embeddings = FakeEmbeddings(size=32)
+        vector_store = FAISS.from_documents(langchain_docs, embeddings)
+        vector_retriever = vector_store.as_retriever(search_kwargs={"k": 5})
+
+        retrievers = []
+        if bm25.retriever:
+            retrievers.append(("bm25", bm25.retriever))
+        retrievers.append(("vector", vector_retriever))
+
         return HybridRetriever(
-            retrievers=[("bm25", bm25.search), ("vector", vector_retriever.search)],
+            retrievers=retrievers,
             weights={"bm25": 1.0, "vector": 0.6},
         )
 

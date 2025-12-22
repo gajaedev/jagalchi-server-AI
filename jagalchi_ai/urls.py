@@ -1,5 +1,7 @@
 from django.urls import path
 
+from jagalchi_ai.ai_core.controller.ai_views import demo_ai
+
 urlpatterns = [
-    # API 라우팅은 최소화하고 내부 서비스 중심으로 설계한다.
+    path("api/ai/demo", demo_ai),
 ]

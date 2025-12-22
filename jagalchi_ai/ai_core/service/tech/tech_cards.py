@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Dict, List, Optional
 
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
 from jagalchi_ai.ai_core.common.hashing import stable_hash_json
 from jagalchi_ai.ai_core.common.nlp.summarization import map_reduce_summary
 from jagalchi_ai.ai_core.common.nlp.text_utils import cheap_embed, extractive_summary
@@ -30,11 +32,15 @@ _DEFAULT_SOURCE_SCORE = 0.45
 class TechCardService:
     """기술 카드 생성/캐시 서비스."""
 
-    def __init__(self, snapshot_store: Optional[SnapshotStore] = None) -> None:
+    def __init__(
+        self,
+        snapshot_store: Optional[SnapshotStore] = None,
+        web_search: Optional[WebSearchService] = None,
+    ) -> None:
         self.snapshot_store = snapshot_store or SnapshotStore()
         self._reel = ReelPipeline()
         self._doc_watcher = DocWatcher()
-        self._web_search = WebSearchService()
+        self._web_search = web_search or WebSearchService()
 
     def get_or_create(self, tech_slug: str, prompt_version: str = "tech_card_v1") -> Dict[str, object]:
         sources = self._resolve_sources(tech_slug)
@@ -158,13 +164,14 @@ class TechCardService:
         change = self._doc_watcher.semantic_diff(before, after)
         return {"changed": change.changed, "change_ratio": change.change_ratio, "summary": change.summary}
 
-    def _chunk_sources(self, tech_slug: str, sources: List[Dict[str, str]], chunk_size: int = 120) -> List[SourceChunk]:
+    def _chunk_sources(self, tech_slug: str, sources: List[Dict[str, str]], chunk_size: int = 320) -> List[SourceChunk]:
         chunks: List[SourceChunk] = []
-        for idx, source in enumerate(sources):
-            words = source["content"].split()
-            for chunk_idx in range(0, len(words), chunk_size):
-                text = " ".join(words[chunk_idx : chunk_idx + chunk_size])
-                chunk_id = f"{tech_slug}:{idx}:{chunk_idx}"
+        splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=40)
+        for source_idx, source in enumerate(sources):
+            documents = splitter.create_documents([source["content"]])
+            for chunk_idx, document in enumerate(documents):
+                text = document.page_content
+                chunk_id = f"{tech_slug}:{source_idx}:{chunk_idx}"
                 chunks.append(
                     SourceChunk(
                         chunk_id=chunk_id,
@@ -177,7 +184,11 @@ class TechCardService:
     def _index_chunks(self, chunks: List[SourceChunk]) -> InMemoryVectorStore:
         store = InMemoryVectorStore()
         items = [
-            VectorItem(item_id=chunk.chunk_id, vector=cheap_embed(chunk.text), metadata=chunk.metadata)
+            VectorItem(
+                item_id=chunk.chunk_id,
+                vector=cheap_embed(chunk.text),
+                metadata={**chunk.metadata, "text": chunk.text},
+            )
             for chunk in chunks
         ]
         store.batch_upsert(items)

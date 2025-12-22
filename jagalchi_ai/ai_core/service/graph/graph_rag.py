@@ -9,7 +9,6 @@ from jagalchi_ai.ai_core.domain.roadmap import Roadmap
 from jagalchi_ai.ai_core.repository.graph_store import GraphStore
 from jagalchi_ai.ai_core.repository.in_memory_vector_store import InMemoryVectorStore
 from jagalchi_ai.ai_core.repository.mock_data import ROADMAPS
-from jagalchi_ai.ai_core.service.retrieval.graph_retriever import GraphRetriever
 from jagalchi_ai.ai_core.service.retrieval.vector_retriever import VectorRetriever
 
 
@@ -26,10 +25,19 @@ class GraphRAGService:
         vector_retriever = VectorRetriever(self._vector_store, namespace="graph")
         vector_hits = vector_retriever.search(query, top_k=top_k)
 
-        graph_retriever = GraphRetriever(self._graph.adjacency, self._node_text_map())
         expanded: List[RetrievalItem] = []
         for hit in vector_hits:
-            expanded.extend(graph_retriever.search(hit.item_id, top_k=2))
+            for neighbor in self._graph.neighbors(hit.item_id)[:2]:
+                text = self._node_text_map().get(neighbor, "")
+                expanded.append(
+                    RetrievalItem(
+                        source="graph",
+                        item_id=neighbor,
+                        score=1.0,
+                        snippet=extractive_summary(text),
+                        metadata={"source": "graph"},
+                    )
+                )
 
         combined = vector_hits + expanded
         combined.sort(key=lambda item: item.score, reverse=True)
@@ -76,7 +84,12 @@ class GraphRAGService:
                 self._vector_store.upsert(
                     node_id,
                     vector=cheap_embed(text),
-                    metadata={"source": "graph", "namespace": "graph", "snippet": extractive_summary(text)},
+                    metadata={
+                        "source": "graph",
+                        "namespace": "graph",
+                        "snippet": extractive_summary(text),
+                        "text": text,
+                    },
                 )
 
             for source, target in roadmap.edges:
