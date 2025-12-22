@@ -203,3 +203,30 @@ CREATOR_TRUST = {
     "user_b": 0.65,
     "user_c": 0.82,
 }
+
+ROLE_REQUIREMENTS = {
+    "backend_dev": ["node_api", "node_db"],
+    "frontend_dev": ["node_html", "node_css", "node_js"],
+}
+
+USER_MASTERED_SKILLS = {
+    "user_1": {"node_html"},
+    "user_2": {"node_api", "node_db"},
+}
+
+USER_PREFERENCES = {
+    "user_1": {"preferred_tags": ["javascript", "frontend"], "media": "video"},
+    "user_2": {"preferred_tags": ["database"], "media": "text"},
+}
+
+USER_FEEDBACKS = [
+    {"from_user": "user_1", "to_user": "user_2", "positive": 3, "negative": 0},
+    {"from_user": "user_2", "to_user": "user_1", "positive": 1, "negative": 1},
+    {"from_user": "user_3", "to_user": "user_1", "positive": 2, "negative": 0},
+]
+
+TAG_HIERARCHY = {
+    "python": ["django", "fastapi", "flask"],
+    "javascript": ["react", "vue", "nodejs"],
+    "frontend": ["html", "css", "react"],
+}

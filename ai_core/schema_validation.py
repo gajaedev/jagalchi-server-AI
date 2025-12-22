@@ -107,6 +107,39 @@ def validate_learning_pattern_output(payload: Dict[str, Any]) -> None:
     _require_types(payload["recommendations"], list, "recommendations")
 
 
+def validate_learning_coach_output(payload: Dict[str, Any]) -> None:
+    _require_fields(payload, [
+        "user_id",
+        "question",
+        "intent",
+        "toolchain",
+        "answer",
+        "retrieval_evidence",
+        "model_version",
+        "prompt_version",
+        "created_at",
+        "cache_hit",
+    ])
+    _require_types(payload["toolchain"], list, "toolchain")
+    _require_types(payload["retrieval_evidence"], list, "retrieval_evidence")
+
+
+def validate_roadmap_recommendation_output(payload: Dict[str, Any]) -> None:
+    _require_fields(payload, ["roadmap_id", "target_role", "nodes", "edges", "model_version", "created_at"])
+    _require_types(payload["nodes"], list, "nodes")
+    _require_types(payload["edges"], list, "edges")
+
+
+def validate_insights_output(payload: Dict[str, Any]) -> None:
+    _require_fields(payload, ["user_id", "target_role", "gap_set", "generated_at"])
+    _require_types(payload["gap_set"], list, "gap_set")
+
+
+def validate_reliability_output(payload: Dict[str, Any]) -> None:
+    _require_fields(payload, ["user_scores", "generated_at", "model_version"])
+    _require_types(payload["user_scores"], dict, "user_scores")
+
+
 def _require_fields(payload: Dict[str, Any], fields: List[str]) -> None:
     missing = [field for field in fields if field not in payload]
     if missing:

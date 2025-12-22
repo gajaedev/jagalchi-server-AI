@@ -51,10 +51,15 @@ class TechCardService:
         summary = extractive_summary(merged, max_sentences=2)
         pitfalls = COMMON_PITFALLS.get(tech_slug, [])
 
+        latest_fetch = max((source["fetched_at"] for source in sources), default="2025-01-01")
         payload = {
+            "id": f"card_{tech_slug}",
+            "name": tech_slug,
+            "category": "tech",
             "tech_slug": tech_slug,
             "version": datetime.utcnow().date().isoformat(),
             "summary": summary,
+            "summary_vector": cheap_embed(summary),
             "why_it_matters": [
                 "업계 표준에 가까운 사용 사례를 확보할 수 있다",
                 "팀 협업과 유지보수에 필요한 패턴을 제공한다",
@@ -69,6 +74,14 @@ class TechCardService:
                 {"stage": "basic", "items": ["핵심 개념 이해", "기본 예제 구현"]},
                 {"stage": "practice", "items": ["작은 기능 단위 프로젝트", "성능/품질 개선"]},
             ],
+            "metadata": {
+                "language": "unknown",
+                "license": "unknown",
+                "latest_version": latest_fetch,
+                "last_updated": latest_fetch,
+            },
+            "relationships": {"based_on": [], "alternatives": _ALTERNATIVE_MAP.get(tech_slug, [])},
+            "reliability_metrics": {"community_score": 80, "doc_freshness": 90},
             "sources": [
                 {"title": source["title"], "url": source["url"], "fetched_at": source["fetched_at"]}
                 for source in sources
