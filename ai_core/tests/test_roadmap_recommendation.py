@@ -10,6 +10,7 @@ class RoadmapRecommendationTests(unittest.TestCase):
         payload = service.recommend("frontend_dev", "user_1")
         self.assertTrue(payload["nodes"])
         self.assertEqual(payload["target_role"], "frontend_dev")
+        self.assertIn("gnn_predictions", payload)
 
     def test_cycle_detection(self) -> None:
         ontology = GraphOntology()

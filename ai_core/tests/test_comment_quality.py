@@ -14,6 +14,8 @@ class CommentQualityTests(unittest.TestCase):
         quality = CommentQualityService(relevance_threshold=0.1)
         relevant = quality.check_relevance("React hooks 사용", "React hooks는 상태를 관리한다")
         self.assertTrue(relevant)
+        moderation = quality.moderate("내용이 좋아요", "React hooks는 상태를 관리한다")
+        self.assertIn("aspect_sentiment", moderation)
 
 
 if __name__ == "__main__":

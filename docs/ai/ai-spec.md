@@ -23,9 +23,17 @@
 - `resource_recommender`: 자료 추천 검색
 - `learning_analytics`: 학습 패턴 분석
 - `learning_coach`: 학습 코치 에이전트
+- `behavior_model`: Fogg 기반 행동 모델
+- `survival_analysis`: Cox 기반 위험도 계산
+- `gnn`: GraphSAGE 기반 임베딩 추정
 - `progress_tracking`: 진행도/잠금/복습 관리
 - `semantic_cache`: 시맨틱 캐싱
+- `summarization`: TextRank/하이브리드 요약
+- `reel_pipeline`: REEL 기반 메타데이터 추출
+- `doc_watcher`: 문서 변경 감지
+- `clustering`: HDBSCAN 대체 클러스터링
 - `tagging`: 계층형 태그 그래프 및 자동 태깅
+- `code_feedback`: 간단 코드 품질 피드백
 - `comment_quality`: 코멘트 품질 관리
 - `reliability`: EigenTrust 기반 신뢰 점수
 - `counterfactual`: IPS 오프라인 평가
@@ -113,7 +121,7 @@
 
 ## 3) Tech Cards (기술 카드)
 ### 파이프라인
-- Fetch → Chunk → Index → Compose → Snapshot
+- Fetch → Chunk → Index → REEL Extract → Hybrid Summary → Doc-Watcher → Snapshot
 - 소스 해시 동일 시 재생성 금지
 
 ### 스키마
@@ -136,6 +144,8 @@
   "metadata": {"language": "...", "license": "...", "latest_version": "...", "last_updated": "..."},
   "relationships": {"based_on": [], "alternatives": []},
   "reliability_metrics": {"community_score": 80, "doc_freshness": 90},
+  "latest_changes": {"changed": false, "change_ratio": 0.0, "summary": "..."},
+  "reel_evidence": [{"query": "license", "snippet": "..."}],
   "sources": [
     {"title": "...", "url": "...", "fetched_at": "..."}
   ],
@@ -269,8 +279,10 @@
   "question": "...",
   "intent": "concept",
   "toolchain": ["graph_explorer"],
+  "plan": ["route", "retrieve", "compose"],
   "answer": "...",
   "retrieval_evidence": [],
+  "behavior_summary": {"motivation": 0.7, "ability": 0.6, "prompt_hour": 20, "dropout_risk": 0.01},
   "model_version": "coach_v1",
   "prompt_version": "coach_v1",
   "created_at": "...",
