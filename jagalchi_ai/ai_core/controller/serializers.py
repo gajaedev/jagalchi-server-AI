@@ -284,3 +284,68 @@ class DemoResponseSerializer(serializers.Serializer):
     roadmap_generated = RoadmapGeneratedSerializer()
     learning_coach = LearningCoachSerializer()
     roadmap_recommendation = RoadmapRecommendationSerializer()
+
+
+# =============================================================================
+# 웹 검색 API 시리얼라이저 (Tavily/Exa)
+# =============================================================================
+
+class WebSearchResultSerializer(serializers.Serializer):
+    """웹 검색 결과 항목 시리얼라이저."""
+    title = serializers.CharField(help_text="검색 결과 제목")
+    url = serializers.CharField(help_text="검색 결과 URL")
+    content = serializers.CharField(help_text="검색 결과 내용 요약")
+    score = serializers.FloatField(help_text="관련성 점수 (0.0 ~ 1.0)")
+    source = serializers.CharField(help_text="검색 엔진 출처 (tavily/exa)")
+    fetched_at = serializers.CharField(help_text="검색 수행 일시")
+
+
+class WebSearchSerializer(serializers.Serializer):
+    """웹 검색 API 응답 시리얼라이저."""
+    query = serializers.CharField(help_text="검색 쿼리")
+    results = WebSearchResultSerializer(many=True, help_text="검색 결과 목록")
+    generated_at = serializers.CharField(help_text="응답 생성 일시")
+    engines_used = serializers.ListField(
+        child=serializers.CharField(),
+        help_text="사용된 검색 엔진 목록"
+    )
+    total_results = serializers.IntegerField(help_text="총 검색 결과 수")
+
+
+# =============================================================================
+# 문서 기반 로드맵 추천 시리얼라이저
+# =============================================================================
+
+class DocumentRoadmapSerializer(serializers.Serializer):
+    """문서 기반 로드맵 추천 API 응답 시리얼라이저."""
+    document_summary = serializers.CharField(help_text="문서 요약 (AI 분석 결과)")
+    extracted_keywords = serializers.ListField(
+        child=serializers.CharField(),
+        help_text="추출된 핵심 키워드"
+    )
+    recommended_roadmaps = RelatedRoadmapCandidateSerializer(
+        many=True,
+        help_text="추천 로드맵 목록"
+    )
+    suggested_topics = serializers.ListField(
+        child=serializers.CharField(),
+        help_text="학습 권장 주제"
+    )
+    model_version = serializers.CharField(help_text="사용된 모델 버전")
+    created_at = serializers.CharField(help_text="생성 일시")
+
+
+# =============================================================================
+# 헬스체크 시리얼라이저
+# =============================================================================
+
+class HealthCheckSerializer(serializers.Serializer):
+    """API 헬스체크 응답 시리얼라이저."""
+    status = serializers.CharField(help_text="서버 상태 (ok/error)")
+    version = serializers.CharField(help_text="API 버전")
+    services = serializers.DictField(
+        child=serializers.BooleanField(),
+        help_text="각 서비스 사용 가능 여부"
+    )
+    timestamp = serializers.CharField(help_text="헬스체크 수행 일시")
+

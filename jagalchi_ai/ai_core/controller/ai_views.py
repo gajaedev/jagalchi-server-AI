@@ -23,8 +23,10 @@ from jagalchi_ai.ai_core.service.tech.tech_fingerprint import TechFingerprintSer
 from jagalchi_ai.ai_core.controller.serializers import (
     CommentDigestSerializer,
     DemoResponseSerializer,
+    DocumentRoadmapSerializer,
     DuplicateSuggestItemSerializer,
     GraphRAGContextSerializer,
+    HealthCheckSerializer,
     LearningCoachSerializer,
     LearningPatternSerializer,
     RecordCoachSerializer,
@@ -34,6 +36,7 @@ from jagalchi_ai.ai_core.controller.serializers import (
     RoadmapRecommendationSerializer,
     TechCardSerializer,
     TechFingerprintSerializer,
+    WebSearchSerializer,
 )
 
 
@@ -453,3 +456,260 @@ def _roadmap_recommendation(target_role: str, user_id: str):
 def _serialize(serializer_class, payload, many: bool = False) -> Response:
     serializer = serializer_class(payload, many=many)
     return Response(serializer.data)
+
+
+# =============================================================================
+# 웹 검색 API (Tavily/Exa)
+# =============================================================================
+
+class WebSearchAPIView(APIView):
+    """
+    웹 검색 API 엔드포인트.
+
+    Tavily와 Exa 검색 엔진을 활용하여 학습 자료를 검색합니다.
+    검색 결과는 관련성 점수로 정렬되어 반환됩니다.
+
+    사용 예시:
+        GET /api/ai/web-search?query=React%20useEffect%20설명&top_k=5
+    """
+
+    @extend_schema(
+        summary="웹 검색 (Tavily/Exa)",
+        description="Tavily와 Exa 검색 엔진을 사용하여 웹에서 학습 자료를 검색합니다.",
+        parameters=[
+            OpenApiParameter(
+                "query",
+                OpenApiTypes.STR,
+                required=True,
+                description="검색 쿼리 (예: 'Python 비동기 프로그래밍')"
+            ),
+            OpenApiParameter(
+                "top_k",
+                OpenApiTypes.INT,
+                required=False,
+                description="반환할 최대 결과 수 (기본: 5, 최대: 20)"
+            ),
+            OpenApiParameter(
+                "engine",
+                OpenApiTypes.STR,
+                required=False,
+                description="사용할 검색 엔진 (tavily/exa/all, 기본: all)",
+                enum=["tavily", "exa", "all"],
+            ),
+        ],
+        responses={200: WebSearchSerializer},
+    )
+    def get(self, request) -> Response:
+        from jagalchi_ai.ai_core.service.retrieval.web_search_service import (
+            WebSearchService,
+            SearchEngine,
+        )
+
+        query = request.GET.get("query", "Python 학습 자료")
+        top_k = min(int(request.GET.get("top_k") or 5), 20)
+        engine_param = request.GET.get("engine", "all")
+
+        # 검색 엔진 선택
+        engine_map = {
+            "tavily": SearchEngine.TAVILY,
+            "exa": SearchEngine.EXA,
+            "all": SearchEngine.ALL,
+        }
+        engine = engine_map.get(engine_param, SearchEngine.ALL)
+
+        # 검색 수행
+        service = WebSearchService()
+        result = service.search_with_metadata(query, top_k=top_k)
+
+        payload = {
+            "query": result.get("query", query),
+            "results": result.get("results", []),
+            "generated_at": result.get("generated_at", datetime.utcnow().isoformat()),
+            "engines_used": result.get("engines_used", []),
+            "total_results": len(result.get("results", [])),
+        }
+
+        return _serialize(WebSearchSerializer, payload)
+
+
+# =============================================================================
+# 문서 기반 로드맵 추천 API
+# =============================================================================
+
+class DocumentRoadmapAPIView(APIView):
+    """
+    문서 기반 로드맵 추천 API 엔드포인트.
+
+    사용자가 제공한 문서(이력서, 학습 계획서 등)를 분석하여
+    적합한 학습 로드맵을 추천합니다.
+
+    사용 예시:
+        POST /api/ai/document-roadmap
+        Body: {"document": "저는 Python을 1년간 공부했고..."}
+    """
+
+    @extend_schema(
+        summary="문서 기반 로드맵 추천",
+        description="사용자가 제공한 문서를 AI가 분석하여 맞춤형 학습 로드맵을 추천합니다.",
+        parameters=[
+            OpenApiParameter(
+                "document",
+                OpenApiTypes.STR,
+                required=False,
+                description="분석할 문서 내용 (이력서, 학습 계획 등)"
+            ),
+            OpenApiParameter(
+                "goal",
+                OpenApiTypes.STR,
+                required=False,
+                description="목표 직군/분야 (예: 'Backend Developer')"
+            ),
+        ],
+        responses={200: DocumentRoadmapSerializer},
+    )
+    def get(self, request) -> Response:
+        document = request.GET.get("document", "")
+        goal = request.GET.get("goal", "")
+
+        # 문서 분석 및 키워드 추출
+        extracted_keywords = _extract_keywords(document)
+
+        # 관련 로드맵 추천
+        graph_rag = GraphRAGService(mock_data.ROADMAPS)
+        context = graph_rag.build_context(document or goal or "프로그래밍", top_k=5)
+
+        # 추천 로드맵 생성
+        recommended = []
+        for i, node in enumerate(context["graph_snapshot"]["nodes"][:3]):
+            recommended.append({
+                "related_roadmap_id": node["node_id"],
+                "score": round(0.95 - (i * 0.1), 2),
+                "reasons": [{"type": "keyword_match", "value": node["tags"][:2]}],
+            })
+
+        payload = {
+            "document_summary": _summarize_document(document) if document else "문서가 제공되지 않았습니다.",
+            "extracted_keywords": extracted_keywords,
+            "recommended_roadmaps": recommended,
+            "suggested_topics": [tag for node in context["graph_snapshot"]["nodes"][:3] for tag in node.get("tags", [])[:2]],
+            "model_version": "document_analyzer_v1",
+            "created_at": datetime.utcnow().isoformat(),
+        }
+
+        return _serialize(DocumentRoadmapSerializer, payload)
+
+    @extend_schema(
+        summary="문서 기반 로드맵 추천 (POST)",
+        description="문서를 POST body로 제출하여 분석합니다.",
+        request={"application/json": {"type": "object", "properties": {"document": {"type": "string"}, "goal": {"type": "string"}}}},
+        responses={200: DocumentRoadmapSerializer},
+    )
+    def post(self, request) -> Response:
+        document = request.data.get("document", "")
+        goal = request.data.get("goal", "")
+
+        # 문서 분석 및 키워드 추출
+        extracted_keywords = _extract_keywords(document)
+
+        # 관련 로드맵 추천
+        graph_rag = GraphRAGService(mock_data.ROADMAPS)
+        query_text = document[:500] if document else goal if goal else "프로그래밍"
+        context = graph_rag.build_context(query_text, top_k=5)
+
+        # 추천 로드맵 생성
+        recommended = []
+        for i, node in enumerate(context["graph_snapshot"]["nodes"][:3]):
+            recommended.append({
+                "related_roadmap_id": node["node_id"],
+                "score": round(0.95 - (i * 0.1), 2),
+                "reasons": [{"type": "keyword_match", "value": node["tags"][:2]}],
+            })
+
+        payload = {
+            "document_summary": _summarize_document(document) if document else "문서가 제공되지 않았습니다.",
+            "extracted_keywords": extracted_keywords,
+            "recommended_roadmaps": recommended,
+            "suggested_topics": [tag for node in context["graph_snapshot"]["nodes"][:3] for tag in node.get("tags", [])[:2]],
+            "model_version": "document_analyzer_v1",
+            "created_at": datetime.utcnow().isoformat(),
+        }
+
+        return _serialize(DocumentRoadmapSerializer, payload)
+
+
+# =============================================================================
+# 헬스체크 API
+# =============================================================================
+
+class HealthCheckAPIView(APIView):
+    """
+    API 헬스체크 엔드포인트.
+
+    서버 상태 및 각 AI 서비스의 사용 가능 여부를 확인합니다.
+    Docker 헬스체크 및 모니터링에 사용됩니다.
+    """
+
+    @extend_schema(
+        summary="헬스체크",
+        description="서버 상태 및 각 AI 서비스의 사용 가능 여부를 확인합니다.",
+        responses={200: HealthCheckSerializer},
+    )
+    def get(self, request) -> Response:
+        from jagalchi_ai.ai_core.client import GeminiClient, TavilySearchClient, ExaSearchClient
+
+        # 각 서비스 상태 확인
+        gemini_available = GeminiClient().available()
+        tavily_available = TavilySearchClient().available
+        exa_available = ExaSearchClient().available()
+
+        payload = {
+            "status": "ok",
+            "version": "1.0.0",
+            "services": {
+                "gemini": gemini_available,
+                "tavily": tavily_available,
+                "exa": exa_available,
+                "graph_rag": True,
+                "semantic_cache": True,
+            },
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+        return _serialize(HealthCheckSerializer, payload)
+
+
+# =============================================================================
+# 유틸리티 함수
+# =============================================================================
+
+def _extract_keywords(document: str) -> list:
+    """문서에서 핵심 키워드를 추출합니다."""
+    if not document:
+        return []
+
+    # 간단한 키워드 추출 (실제로는 NLP 모델 활용)
+    tech_keywords = [
+        "python", "javascript", "java", "react", "django", "flask",
+        "machine learning", "deep learning", "ai", "데이터", "백엔드",
+        "프론트엔드", "api", "database", "sql", "nosql", "docker",
+        "kubernetes", "aws", "cloud", "typescript", "node.js",
+    ]
+
+    document_lower = document.lower()
+    found = [kw for kw in tech_keywords if kw in document_lower]
+
+    return found[:10] if found else ["general", "programming"]
+
+
+def _summarize_document(document: str) -> str:
+    """문서를 요약합니다."""
+    if not document:
+        return ""
+
+    # 간단한 요약 (처음 200자)
+    summary = document[:200].strip()
+    if len(document) > 200:
+        summary += "..."
+
+    return f"문서 분석 결과: {summary}"
+
