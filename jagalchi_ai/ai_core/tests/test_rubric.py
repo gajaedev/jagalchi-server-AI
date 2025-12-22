@@ -1,7 +1,8 @@
 import unittest
 
-from jagalchi_ai.ai_core.record.rubric import score_record
-from jagalchi_ai.ai_core.core.types import LearningRecord, LinkMeta
+from jagalchi_ai.ai_core.domain.learning_record import LearningRecord
+from jagalchi_ai.ai_core.domain.link_meta import LinkMeta
+from jagalchi_ai.ai_core.service.record.rubric import score_record
 
 
 class RubricScoreTests(unittest.TestCase):

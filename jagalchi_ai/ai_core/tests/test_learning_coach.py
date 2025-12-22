@@ -1,7 +1,7 @@
 import unittest
 
-from jagalchi_ai.ai_core.coach.learning_coach import LearningCoachService
-from jagalchi_ai.ai_core.core.schema_validation import validate_learning_coach_output
+from jagalchi_ai.ai_core.common.schema_validation import validate_learning_coach_output
+from jagalchi_ai.ai_core.service.coach.learning_coach import LearningCoachService
 
 
 class LearningCoachTests(unittest.TestCase):

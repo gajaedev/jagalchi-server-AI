@@ -1,13 +1,13 @@
 import unittest
 
-from jagalchi_ai.ai_core.analytics.learning_analytics import LearningPatternService
-from jagalchi_ai.ai_core.recommendation.resource_recommender import ResourceRecommendationService
-from jagalchi_ai.ai_core.graph.roadmap_generator import RoadmapGeneratorService
-from jagalchi_ai.ai_core.core.schema_validation import (
+from jagalchi_ai.ai_core.common.schema_validation import (
     validate_learning_pattern_output,
     validate_resource_recommendation_output,
     validate_roadmap_generation_output,
 )
+from jagalchi_ai.ai_core.service.analytics.learning_analytics import LearningPatternService
+from jagalchi_ai.ai_core.service.graph.roadmap_generator import RoadmapGeneratorService
+from jagalchi_ai.ai_core.service.recommendation.resource_recommender import ResourceRecommendationService
 
 
 class ExtendedSchemaTests(unittest.TestCase):

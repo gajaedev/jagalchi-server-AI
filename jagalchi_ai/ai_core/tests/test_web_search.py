@@ -1,9 +1,8 @@
 import unittest
 
-from jagalchi_ai.ai_core.clients.exa_client import ExaResult
-from jagalchi_ai.ai_core.clients.tavily_client import TavilyResult
-from jagalchi_ai.ai_core.core.snapshot import SnapshotStore
-from jagalchi_ai.ai_core.retrieval.web_search import WebSearchService
+from jagalchi_ai.ai_core.client import ExaResult, TavilyResult
+from jagalchi_ai.ai_core.repository.snapshot_store import SnapshotStore
+from jagalchi_ai.ai_core.service.retrieval.web_search_service import WebSearchService
 
 
 class FakeTavilyClient:

@@ -1,6 +1,6 @@
 import unittest
 
-from jagalchi_ai.ai_core.graph.gnn import GraphSAGE
+from jagalchi_ai.ai_core.service.graph.graph_sage import GraphSAGE
 
 
 class GnnTests(unittest.TestCase):

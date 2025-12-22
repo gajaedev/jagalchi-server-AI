@@ -1,6 +1,6 @@
 import unittest
 
-from jagalchi_ai.ai_core.analytics.insights import InsightsService
+from jagalchi_ai.ai_core.service.analytics.insights import InsightsService
 
 
 class InsightsTests(unittest.TestCase):

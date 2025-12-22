@@ -1,6 +1,6 @@
 import unittest
 
-from jagalchi_ai.ai_core.nlp.summarization import textrank_sentences
+from jagalchi_ai.ai_core.common.nlp.summarization import textrank_sentences
 
 
 class SummarizationTests(unittest.TestCase):

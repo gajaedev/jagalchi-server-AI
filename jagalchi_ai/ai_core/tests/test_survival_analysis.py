@@ -1,6 +1,6 @@
 import unittest
 
-from jagalchi_ai.ai_core.coach.survival_analysis import CoxModel
+from jagalchi_ai.ai_core.service.coach.cox_model import CoxModel
 
 
 class SurvivalAnalysisTests(unittest.TestCase):

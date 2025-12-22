@@ -1,6 +1,6 @@
 import unittest
 
-from jagalchi_ai.ai_core.tech.reel_pipeline import ReelPipeline
+from jagalchi_ai.ai_core.service.tech.reel_pipeline import ReelPipeline
 
 
 class ReelPipelineTests(unittest.TestCase):

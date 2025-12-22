@@ -1,7 +1,9 @@
 import unittest
 
-from jagalchi_ai.ai_core.core.mock_data import ROADMAPS
-from jagalchi_ai.ai_core.graph.roadmap_recommendation import GraphEdge, GraphOntology, RoadmapRecommendationService
+from jagalchi_ai.ai_core.domain.graph_edge import GraphEdge
+from jagalchi_ai.ai_core.repository.mock_data import ROADMAPS
+from jagalchi_ai.ai_core.service.graph.graph_ontology import GraphOntology
+from jagalchi_ai.ai_core.service.graph.roadmap_recommendation_service import RoadmapRecommendationService
 
 
 class RoadmapRecommendationTests(unittest.TestCase):

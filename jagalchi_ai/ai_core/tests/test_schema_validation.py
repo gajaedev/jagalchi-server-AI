@@ -1,8 +1,8 @@
 import unittest
 
-from jagalchi_ai.ai_core.core.mock_data import LEARNING_RECORDS, ROADMAPS
-from jagalchi_ai.ai_core.record.record_coach import RecordCoachService
-from jagalchi_ai.ai_core.core.schema_validation import validate_record_coach_output
+from jagalchi_ai.ai_core.common.schema_validation import validate_record_coach_output
+from jagalchi_ai.ai_core.repository.mock_data import LEARNING_RECORDS, ROADMAPS
+from jagalchi_ai.ai_core.service.record.record_coach import RecordCoachService
 
 
 class SchemaValidationTests(unittest.TestCase):

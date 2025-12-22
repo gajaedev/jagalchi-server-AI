@@ -1,6 +1,7 @@
 import unittest
 
-from jagalchi_ai.ai_core.tags.tagging import AutoTagger, TagGraph
+from jagalchi_ai.ai_core.service.tags.auto_tagger import AutoTagger
+from jagalchi_ai.ai_core.service.tags.tag_graph import TagGraph
 
 
 class TaggingTests(unittest.TestCase):

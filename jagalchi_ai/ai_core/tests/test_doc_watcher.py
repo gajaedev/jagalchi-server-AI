@@ -1,6 +1,6 @@
 import unittest
 
-from jagalchi_ai.ai_core.tech.doc_watcher import DocWatcher
+from jagalchi_ai.ai_core.service.tech.doc_watcher import DocWatcher
 
 
 class DocWatcherTests(unittest.TestCase):

@@ -1,6 +1,6 @@
 import unittest
 
-from jagalchi_ai.ai_core.coach.state_workflow import SimpleWorkflow
+from jagalchi_ai.ai_core.service.coach.simple_workflow import SimpleWorkflow
 
 
 class WorkflowTests(unittest.TestCase):

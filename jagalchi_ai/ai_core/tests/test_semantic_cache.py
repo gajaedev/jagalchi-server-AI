@@ -1,6 +1,6 @@
 import unittest
 
-from jagalchi_ai.ai_core.retrieval.semantic_cache import SemanticCache
+from jagalchi_ai.ai_core.repository.semantic_cache import SemanticCache
 
 
 class SemanticCacheTests(unittest.TestCase):

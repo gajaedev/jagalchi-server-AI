@@ -1,8 +1,8 @@
 import unittest
 
-from jagalchi_ai.ai_core.core.mock_data import LEARNING_RECORDS, ROADMAPS
-from jagalchi_ai.ai_core.record.record_coach import RecordCoachService
-from jagalchi_ai.ai_core.core.snapshot import SnapshotStore
+from jagalchi_ai.ai_core.repository.mock_data import LEARNING_RECORDS, ROADMAPS
+from jagalchi_ai.ai_core.repository.snapshot_store import SnapshotStore
+from jagalchi_ai.ai_core.service.record.record_coach import RecordCoachService
 
 
 class CacheTests(unittest.TestCase):

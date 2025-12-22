@@ -10,38 +10,39 @@
 - 재현 가능성: model_version, prompt_version, retrieval_evidence, created_at 포함
 
 ## 공통 모듈
-- `hashing`: 입력/소스 해시 생성
-- `snapshot`: 스냅샷 캐시 저장
-- `schema_validation`: 스키마 검증
-- `vector_store`: in-memory 벡터 스토어 인터페이스
-- `retrieval`: BM25 + Vector + Graph 하이브리드
-- `ranking`: 연관 로드맵 랭킹 가중치
-- `model_routing`: 작은 모델 우선 라우팅
-- `graph_rag`: 그래프 기반 근거 수집
-- `roadmap_generator`: 그래프 RAG 기반 로드맵 생성
-- `roadmap_recommendation`: DAG 기반 동적 로드맵 생성
-- `resource_recommender`: 자료 추천 검색
-- `learning_analytics`: 학습 패턴 분석
-- `learning_coach`: 학습 코치 에이전트
-- `behavior_model`: Fogg 기반 행동 모델
-- `survival_analysis`: Cox 기반 위험도 계산
-- `gnn`: GraphSAGE 기반 임베딩 추정
-- `progress_tracking`: 진행도/잠금/복습 관리
-- `semantic_cache`: 시맨틱 캐싱
-- `summarization`: TextRank/하이브리드 요약
-- `reel_pipeline`: REEL 기반 메타데이터 추출
-- `doc_watcher`: 문서 변경 감지
-- `clustering`: HDBSCAN 대체 클러스터링
-- `tagging`: 계층형 태그 그래프 및 자동 태깅
-- `code_feedback`: 간단 코드 품질 피드백
-- `comment_quality`: 코멘트 품질 관리
-- `reliability`: EigenTrust 기반 신뢰 점수
-- `counterfactual`: IPS 오프라인 평가
-- `cove_verifier`: CoVe 검증 보조
-- `gemini_client`: Gemini LLM 호출(선택)
-- `tavily_client`: Tavily 검색 클라이언트(신뢰 소스 확보)
-- `exa_client`: Exa 검색 클라이언트(신뢰 소스 확보)
-- `web_search`: Tavily/Exa 검색 스냅샷/캐시 서비스
+- 레이어 구조: `controller` → `service` → `repository` → `domain` → `common`
+- `common/hashing`: 입력/소스 해시 생성
+- `common/schema_validation`: 스키마 검증
+- `repository/snapshot_store`: 스냅샷 캐시 저장
+- `repository/vector_store`: in-memory 벡터 스토어 인터페이스
+- `service/retrieval`: BM25 + Vector + Graph 하이브리드
+- `service/recommendation/ranking`: 연관 로드맵 랭킹 가중치
+- `config/model_router`: 작은 모델 우선 라우팅
+- `service/graph/graph_rag`: 그래프 기반 근거 수집
+- `service/graph/roadmap_generator`: 그래프 RAG 기반 로드맵 생성
+- `service/graph/roadmap_recommendation`: DAG 기반 동적 로드맵 생성
+- `service/recommendation/resource_recommender`: 자료 추천 검색
+- `service/analytics/learning_analytics`: 학습 패턴 분석
+- `service/coach/learning_coach`: 학습 코치 에이전트
+- `service/coach/behavior_model`: Fogg 기반 행동 모델
+- `service/coach/cox_model`: Cox 기반 위험도 계산
+- `service/graph/graph_sage`: GraphSAGE 기반 임베딩 추정
+- `service/progress/progress_tracking`: 진행도/잠금/복습 관리
+- `repository/semantic_cache`: 시맨틱 캐싱
+- `common/nlp/summarization`: TextRank/하이브리드 요약
+- `service/tech/reel_pipeline`: REEL 기반 메타데이터 추출
+- `service/tech/doc_watcher`: 문서 변경 감지
+- `common/nlp/clustering`: HDBSCAN 대체 클러스터링
+- `service/tags/auto_tagger`: 계층형 태그 그래프 및 자동 태깅
+- `service/record/code_feedback`: 간단 코드 품질 피드백
+- `service/comments/comment_quality_service`: 코멘트 품질 관리
+- `service/trust/reliability_service`: EigenTrust 기반 신뢰 점수
+- `service/trust/counterfactual`: IPS 오프라인 평가
+- `service/trust/cove_verifier`: CoVe 검증 보조
+- `client/gemini_client`: Gemini LLM 호출(선택)
+- `client/tavily_client`: Tavily 검색 클라이언트(신뢰 소스 확보)
+- `client/exa_client`: Exa 검색 클라이언트(신뢰 소스 확보)
+- `service/retrieval/web_search_service`: Tavily/Exa 검색 스냅샷/캐시 서비스
 
 ---
 

@@ -1,6 +1,7 @@
 import unittest
 
-from jagalchi_ai.ai_core.comments.comment_quality import CommentQualityService, CommentThreadService
+from jagalchi_ai.ai_core.service.comments.comment_quality_service import CommentQualityService
+from jagalchi_ai.ai_core.service.comments.comment_thread_service import CommentThreadService
 
 
 class CommentQualityTests(unittest.TestCase):

@@ -1,8 +1,8 @@
 import unittest
 from datetime import datetime, timedelta
 
-from jagalchi_ai.ai_core.trust.reliability import ReliabilityService
-from jagalchi_ai.ai_core.core.schema_validation import validate_reliability_output
+from jagalchi_ai.ai_core.common.schema_validation import validate_reliability_output
+from jagalchi_ai.ai_core.service.trust.reliability_service import ReliabilityService
 
 
 class ReliabilityTests(unittest.TestCase):

@@ -1,6 +1,6 @@
 import unittest
 
-from jagalchi_ai.ai_core.recommendation.related_roadmaps import RelatedRoadmapsService
+from jagalchi_ai.ai_core.service.recommendation.related_roadmaps import RelatedRoadmapsService
 
 
 class RankingTests(unittest.TestCase):

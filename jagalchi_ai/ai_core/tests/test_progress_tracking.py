@@ -1,8 +1,8 @@
 import unittest
 from datetime import datetime, timedelta
 
-from jagalchi_ai.ai_core.core.mock_data import ROADMAPS
-from jagalchi_ai.ai_core.progress.progress_tracking import ProgressTrackingService
+from jagalchi_ai.ai_core.repository.mock_data import ROADMAPS
+from jagalchi_ai.ai_core.service.progress.progress_tracking_service import ProgressTrackingService
 
 
 class ProgressTrackingTests(unittest.TestCase):
