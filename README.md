@@ -37,6 +37,7 @@ curl "http://localhost:8000/api/ai/demo?roadmap_id=rm_frontend&tech_slug=react&u
 ## Swagger 문서
 - OpenAPI JSON: `http://localhost:8000/api/schema/`
 - Swagger UI: `http://localhost:8000/api/docs/`
+- Redoc: `http://localhost:8000/api/redoc/`
 
 ## Gemini 연결 확인(선택)
 ```bash
