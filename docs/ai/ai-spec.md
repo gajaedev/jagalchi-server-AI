@@ -19,8 +19,17 @@
 - `model_routing`: 작은 모델 우선 라우팅
 - `graph_rag`: 그래프 기반 근거 수집
 - `roadmap_generator`: 그래프 RAG 기반 로드맵 생성
+- `roadmap_recommendation`: DAG 기반 동적 로드맵 생성
 - `resource_recommender`: 자료 추천 검색
 - `learning_analytics`: 학습 패턴 분석
+- `learning_coach`: 학습 코치 에이전트
+- `progress_tracking`: 진행도/잠금/복습 관리
+- `semantic_cache`: 시맨틱 캐싱
+- `tagging`: 계층형 태그 그래프 및 자동 태깅
+- `comment_quality`: 코멘트 품질 관리
+- `reliability`: EigenTrust 기반 신뢰 점수
+- `counterfactual`: IPS 오프라인 평가
+- `cove_verifier`: CoVe 검증 보조
 - `gemini_client`: Gemini LLM 호출(선택)
 
 ---
@@ -111,8 +120,12 @@
 ```json
 {
   "tech_slug": "react",
+  "id": "card_react",
+  "name": "react",
+  "category": "tech",
   "version": "2025-12-xx",
   "summary": "...",
+  "summary_vector": [0.1, 0.2],
   "why_it_matters": ["..."],
   "when_to_use": ["..."],
   "alternatives": [{"slug": "...", "why": "..."}],
@@ -120,6 +133,9 @@
   "learning_path": [
     {"stage": "basic", "items": ["..."]}
   ],
+  "metadata": {"language": "...", "license": "...", "latest_version": "...", "last_updated": "..."},
+  "relationships": {"based_on": [], "alternatives": []},
+  "reliability_metrics": {"community_score": 80, "doc_freshness": 90},
   "sources": [
     {"title": "...", "url": "...", "fetched_at": "..."}
   ],
@@ -237,3 +253,81 @@
   "generated_at": "..."
 }
 ```
+
+---
+
+## 9) Learning Coach (학습 코치)
+### 파이프라인
+- Router로 의도 분류 → GraphExplorer/DocRetriever/ProgressChecker 실행
+- 시맨틱 캐싱으로 유사 질문 재사용
+- Compose는 필요 시 LLM으로 답변 보정
+
+### 스키마
+```json
+{
+  "user_id": "...",
+  "question": "...",
+  "intent": "concept",
+  "toolchain": ["graph_explorer"],
+  "answer": "...",
+  "retrieval_evidence": [],
+  "model_version": "coach_v1",
+  "prompt_version": "coach_v1",
+  "created_at": "...",
+  "cache_hit": false
+}
+```
+
+---
+
+## 10) Insights (인사이트)
+### 파이프라인
+- 이벤트 로그 기반 집계
+- 지식 격차: TargetSkills - MasteredSkills
+- 유사 학습자 클러스터링(간단 유사도)
+
+### 스키마
+```json
+{
+  "user_id": "...",
+  "target_role": "...",
+  "gap_set": ["..."],
+  "generated_at": "..."
+}
+```
+
+---
+
+## 11) Progress Tracking (진행도)
+### 파이프라인
+- 상태: LOCKED/AVAILABLE/IN_PROGRESS/COMPLETED/NEEDS_REVIEW
+- 완료 이벤트로 후속 노드 잠금 해제
+- SRS로 proficiency 감소 및 복습 필요 플래그
+
+---
+
+## 12) Tags (태그)
+### 파이프라인
+- 계층형 태그 그래프(SKOS)로 검색 확장
+- 룰 기반 + 다중 라벨 자동 태깅
+
+---
+
+## 13) Comments (코멘트)
+### 기능
+- Materialized Path로 대댓글 트리 정렬
+- 관련성/감정 기반 품질 플래그
+
+---
+
+## 14) Reliability Score (신뢰 점수)
+### 파이프라인
+- EigenTrust 변형으로 사용자 글로벌 신뢰 계산
+- 콘텐츠 신뢰 = 작성자 신뢰 + 최신성 decay
+
+---
+
+## 15) Semantic Cache + Counterfactual
+### 요약
+- 시맨틱 캐싱으로 유사 질문 재사용
+- IPS 추정으로 오프라인 추천 평가
