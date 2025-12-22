@@ -63,6 +63,15 @@ class TechStack:
 
 
 @dataclass
+class EventLog:
+    event_type: str
+    user_id: str
+    roadmap_id: str
+    node_id: Optional[str]
+    created_at: datetime
+
+
+@dataclass
 class RetrievalItem:
     source: str
     item_id: str

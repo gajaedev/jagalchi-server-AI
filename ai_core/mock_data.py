@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from .types import Comment, LearningRecord, LinkMeta, Roadmap, RoadmapNode, TechStack
+from .types import Comment, EventLog, LearningRecord, LinkMeta, Roadmap, RoadmapNode, TechStack
 
 
 ROADMAPS = {
@@ -138,6 +138,44 @@ LEARNING_RECORDS = [
         node_id="node_js",
         roadmap_id="rm_frontend",
     )
+]
+
+EVENT_LOGS = [
+    EventLog(
+        event_type="record_feedback_view",
+        user_id="user_1",
+        roadmap_id="rm_frontend",
+        node_id="node_js",
+        created_at=datetime.utcnow() - timedelta(days=1),
+    ),
+    EventLog(
+        event_type="rec_click",
+        user_id="user_1",
+        roadmap_id="rm_frontend",
+        node_id="node_css",
+        created_at=datetime.utcnow() - timedelta(days=2),
+    ),
+    EventLog(
+        event_type="rec_impression",
+        user_id="user_1",
+        roadmap_id="rm_backend",
+        node_id=None,
+        created_at=datetime.utcnow() - timedelta(days=4),
+    ),
+    EventLog(
+        event_type="record_feedback_view",
+        user_id="user_1",
+        roadmap_id="rm_frontend",
+        node_id="node_html",
+        created_at=datetime.utcnow() - timedelta(days=6),
+    ),
+    EventLog(
+        event_type="rec_click",
+        user_id="user_1",
+        roadmap_id="rm_react",
+        node_id="node_hooks",
+        created_at=datetime.utcnow() - timedelta(days=8),
+    ),
 ]
 
 CO_FOLLOW = {

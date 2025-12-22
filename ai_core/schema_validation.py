@@ -77,6 +77,36 @@ def validate_comment_digest_output(payload: Dict[str, Any]) -> None:
     _require_types(payload["bottlenecks"], list, "bottlenecks")
 
 
+def validate_roadmap_generation_output(payload: Dict[str, Any]) -> None:
+    _require_fields(payload, [
+        "roadmap_id",
+        "title",
+        "description",
+        "nodes",
+        "edges",
+        "tags",
+        "model_version",
+        "prompt_version",
+        "created_at",
+        "retrieval_evidence",
+    ])
+    _require_types(payload["nodes"], list, "nodes")
+    _require_types(payload["edges"], list, "edges")
+    _require_types(payload["tags"], list, "tags")
+
+
+def validate_resource_recommendation_output(payload: Dict[str, Any]) -> None:
+    _require_fields(payload, ["query", "generated_at", "items", "model_version", "retrieval_evidence"])
+    _require_types(payload["items"], list, "items")
+    _require_types(payload["retrieval_evidence"], list, "retrieval_evidence")
+
+
+def validate_learning_pattern_output(payload: Dict[str, Any]) -> None:
+    _require_fields(payload, ["user_id", "period", "patterns", "recommendations", "model_version", "generated_at"])
+    _require_types(payload["patterns"], dict, "patterns")
+    _require_types(payload["recommendations"], list, "recommendations")
+
+
 def _require_fields(payload: Dict[str, Any], fields: List[str]) -> None:
     missing = [field for field in fields if field not in payload]
     if missing:
