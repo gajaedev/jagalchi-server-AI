@@ -1,8 +1,8 @@
 import unittest
 from datetime import datetime, timedelta
 
-from ai_core.reliability import ReliabilityService
-from ai_core.schema_validation import validate_reliability_output
+from ai_core.trust.reliability import ReliabilityService
+from ai_core.core.schema_validation import validate_reliability_output
 
 
 class ReliabilityTests(unittest.TestCase):

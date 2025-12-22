@@ -1,6 +1,6 @@
 import unittest
 
-from ai_core.state_workflow import SimpleWorkflow
+from ai_core.coach.state_workflow import SimpleWorkflow
 
 
 class WorkflowTests(unittest.TestCase):

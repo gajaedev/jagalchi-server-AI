@@ -1,6 +1,6 @@
 import unittest
 
-from ai_core.gnn import GraphSAGE
+from ai_core.graph.gnn import GraphSAGE
 
 
 class GnnTests(unittest.TestCase):

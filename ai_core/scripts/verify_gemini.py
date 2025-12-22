@@ -1,6 +1,6 @@
 import os
 
-from ai_core.gemini_client import GeminiClient
+from ai_core.clients.gemini_client import GeminiClient
 
 
 def main() -> None:

@@ -1,6 +1,6 @@
 import unittest
 
-from ai_core.reel_pipeline import ReelPipeline
+from ai_core.tech.reel_pipeline import ReelPipeline
 
 
 class ReelPipelineTests(unittest.TestCase):

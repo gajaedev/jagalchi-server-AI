@@ -1,6 +1,6 @@
 import unittest
 
-from ai_core.semantic_cache import SemanticCache
+from ai_core.retrieval.semantic_cache import SemanticCache
 
 
 class SemanticCacheTests(unittest.TestCase):

@@ -1,6 +1,6 @@
 import unittest
 
-from ai_core.survival_analysis import CoxModel
+from ai_core.coach.survival_analysis import CoxModel
 
 
 class SurvivalAnalysisTests(unittest.TestCase):

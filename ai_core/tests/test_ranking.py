@@ -1,6 +1,6 @@
 import unittest
 
-from ai_core.related_roadmaps import RelatedRoadmapsService
+from ai_core.recommendation.related_roadmaps import RelatedRoadmapsService
 
 
 class RankingTests(unittest.TestCase):

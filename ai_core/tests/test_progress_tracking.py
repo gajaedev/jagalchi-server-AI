@@ -1,8 +1,8 @@
 import unittest
 from datetime import datetime, timedelta
 
-from ai_core.mock_data import ROADMAPS
-from ai_core.progress_tracking import ProgressTrackingService
+from ai_core.core.mock_data import ROADMAPS
+from ai_core.progress.progress_tracking import ProgressTrackingService
 
 
 class ProgressTrackingTests(unittest.TestCase):

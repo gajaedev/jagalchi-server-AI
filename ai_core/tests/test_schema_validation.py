@@ -1,8 +1,8 @@
 import unittest
 
-from ai_core.mock_data import LEARNING_RECORDS, ROADMAPS
-from ai_core.record_coach import RecordCoachService
-from ai_core.schema_validation import validate_record_coach_output
+from ai_core.core.mock_data import LEARNING_RECORDS, ROADMAPS
+from ai_core.record.record_coach import RecordCoachService
+from ai_core.core.schema_validation import validate_record_coach_output
 
 
 class SchemaValidationTests(unittest.TestCase):

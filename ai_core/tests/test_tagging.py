@@ -1,6 +1,6 @@
 import unittest
 
-from ai_core.tagging import AutoTagger, TagGraph
+from ai_core.tags.tagging import AutoTagger, TagGraph
 
 
 class TaggingTests(unittest.TestCase):

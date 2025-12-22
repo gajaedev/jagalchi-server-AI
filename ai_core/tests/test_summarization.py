@@ -1,6 +1,6 @@
 import unittest
 
-from ai_core.summarization import textrank_sentences
+from ai_core.nlp.summarization import textrank_sentences
 
 
 class SummarizationTests(unittest.TestCase):

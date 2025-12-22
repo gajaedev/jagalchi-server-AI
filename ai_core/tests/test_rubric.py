@@ -1,7 +1,7 @@
 import unittest
 
-from ai_core.rubric import score_record
-from ai_core.types import LearningRecord, LinkMeta
+from ai_core.record.rubric import score_record
+from ai_core.core.types import LearningRecord, LinkMeta
 
 
 class RubricScoreTests(unittest.TestCase):

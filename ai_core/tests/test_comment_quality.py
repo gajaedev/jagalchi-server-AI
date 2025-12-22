@@ -1,6 +1,6 @@
 import unittest
 
-from ai_core.comment_quality import CommentQualityService, CommentThreadService
+from ai_core.comments.comment_quality import CommentQualityService, CommentThreadService
 
 
 class CommentQualityTests(unittest.TestCase):

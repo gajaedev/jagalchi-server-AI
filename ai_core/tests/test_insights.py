@@ -1,6 +1,6 @@
 import unittest
 
-from ai_core.insights import InsightsService
+from ai_core.analytics.insights import InsightsService
 
 
 class InsightsTests(unittest.TestCase):

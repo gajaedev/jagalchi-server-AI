@@ -1,6 +1,6 @@
 import unittest
 
-from ai_core.doc_watcher import DocWatcher
+from ai_core.tech.doc_watcher import DocWatcher
 
 
 class DocWatcherTests(unittest.TestCase):

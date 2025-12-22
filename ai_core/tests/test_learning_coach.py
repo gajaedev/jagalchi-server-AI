@@ -1,7 +1,7 @@
 import unittest
 
-from ai_core.learning_coach import LearningCoachService
-from ai_core.schema_validation import validate_learning_coach_output
+from ai_core.coach.learning_coach import LearningCoachService
+from ai_core.core.schema_validation import validate_learning_coach_output
 
 
 class LearningCoachTests(unittest.TestCase):

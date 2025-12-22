@@ -1,9 +1,9 @@
 import unittest
 
-from ai_core.learning_analytics import LearningPatternService
-from ai_core.resource_recommender import ResourceRecommendationService
-from ai_core.roadmap_generator import RoadmapGeneratorService
-from ai_core.schema_validation import (
+from ai_core.analytics.learning_analytics import LearningPatternService
+from ai_core.recommendation.resource_recommender import ResourceRecommendationService
+from ai_core.graph.roadmap_generator import RoadmapGeneratorService
+from ai_core.core.schema_validation import (
     validate_learning_pattern_output,
     validate_resource_recommendation_output,
     validate_roadmap_generation_output,

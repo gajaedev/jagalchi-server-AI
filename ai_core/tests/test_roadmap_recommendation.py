@@ -1,7 +1,7 @@
 import unittest
 
-from ai_core.mock_data import ROADMAPS
-from ai_core.roadmap_recommendation import GraphEdge, GraphOntology, RoadmapRecommendationService
+from ai_core.core.mock_data import ROADMAPS
+from ai_core.graph.roadmap_recommendation import GraphEdge, GraphOntology, RoadmapRecommendationService
 
 
 class RoadmapRecommendationTests(unittest.TestCase):
