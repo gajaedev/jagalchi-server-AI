@@ -13,6 +13,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "rest_framework",
+    "drf_spectacular",
     "jagalchi_ai.ai_core",
 ]
 
@@ -76,3 +78,14 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+REST_FRAMEWORK = {
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "UNICODE_JSON": True,
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Jagalchi AI API",
+    "DESCRIPTION": "Jagalchi AI 데모 API 스펙",
+    "VERSION": "0.1.0",
+}

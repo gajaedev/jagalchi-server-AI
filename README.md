@@ -34,6 +34,10 @@ docker compose up --build
 curl "http://localhost:8000/api/ai/demo?roadmap_id=rm_frontend&tech_slug=react&user_id=user_1"
 ```
 
+## Swagger 문서
+- OpenAPI JSON: `http://localhost:8000/api/schema/`
+- Swagger UI: `http://localhost:8000/api/docs/`
+
 ## Gemini 연결 확인(선택)
 ```bash
 export GEMINI_API_KEY=your-key

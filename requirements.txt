@@ -1,4 +1,6 @@
 Django>=4.2,<5.0
+drf-spectacular>=0.27.2
+djangorestframework>=3.15
 google-genai>=0.5.0
 exa-py>=1.0.12
 faiss-cpu>=1.7.4

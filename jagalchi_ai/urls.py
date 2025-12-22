@@ -1,7 +1,11 @@
 from django.urls import path
 
-from jagalchi_ai.ai_core.controller.ai_views import demo_ai
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+
+from jagalchi_ai.ai_core.controller.ai_views import DemoAIAPIView
 
 urlpatterns = [
-    path("api/ai/demo", demo_ai),
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path("api/ai/demo", DemoAIAPIView.as_view()),
 ]
