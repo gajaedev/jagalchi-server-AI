@@ -179,27 +179,27 @@ EVENT_LOGS = [
 ]
 
 CO_FOLLOW = {
-    \"rm_frontend\": {\"rm_react\": 0.32, \"rm_backend\": 0.18},
-    \"rm_backend\": {\"rm_frontend\": 0.22},
+    "rm_frontend": {"rm_react": 0.32, "rm_backend": 0.18},
+    "rm_backend": {"rm_frontend": 0.22},
 }
 
 CO_COMPLETE = {
-    \"rm_frontend\": {\"rm_react\": 0.41, \"rm_backend\": 0.15},
-    \"rm_backend\": {\"rm_frontend\": 0.27},
+    "rm_frontend": {"rm_react": 0.41, "rm_backend": 0.15},
+    "rm_backend": {"rm_frontend": 0.27},
 }
 
 SIMILAR_USER = {
-    \"rm_frontend\": {\"rm_react\": 0.25},
+    "rm_frontend": {"rm_react": 0.25},
 }
 
 POPULARITY = {
-    \"rm_frontend\": 1200,
-    \"rm_backend\": 800,
-    \"rm_react\": 900,
+    "rm_frontend": 1200,
+    "rm_backend": 800,
+    "rm_react": 900,
 }
 
 CREATOR_TRUST = {
-    \"user_a\": 0.7,
-    \"user_b\": 0.65,
-    \"user_c\": 0.82,
+    "user_a": 0.7,
+    "user_b": 0.65,
+    "user_c": 0.82,
 }

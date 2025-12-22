@@ -91,7 +91,7 @@ class TechCardService:
                     SourceChunk(
                         chunk_id=chunk_id,
                         text=text,
-                        metadata={\"source\": \"tech_card\", \"tech_slug\": tech_slug, \"snippet\": extractive_summary(text)},
+                        metadata={"source": "tech_card", "tech_slug": tech_slug, "snippet": extractive_summary(text)},
                     )
                 )
         return chunks

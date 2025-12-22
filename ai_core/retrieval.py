@@ -99,22 +99,22 @@ class HybridRetriever:
 
 
 class VectorRetriever:
-    def __init__(self, store: VectorStore, namespace: str = \"\") -> None:
+    def __init__(self, store: VectorStore, namespace: str = "") -> None:
         self._store = store
         self._namespace = namespace
 
     def search(self, query: str, top_k: int = 5) -> List[RetrievalItem]:
         vector = cheap_embed(query)
-        filters = {\"namespace\": self._namespace} if self._namespace else None
+        filters = {"namespace": self._namespace} if self._namespace else None
         items = self._store.query(vector, top_k=top_k, filters=filters)
         results = []
         for item in items:
             results.append(
                 RetrievalItem(
-                    source=item.metadata.get(\"source\", \"vector\"),
+                    source=item.metadata.get("source", "vector"),
                     item_id=item.item_id,
                     score=1.0,
-                    snippet=item.metadata.get(\"snippet\", \"\"),
+                    snippet=item.metadata.get("snippet", ""),
                     metadata=item.metadata,
                 )
             )
