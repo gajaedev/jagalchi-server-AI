@@ -4,6 +4,11 @@ from jagalchi_ai.ai_core.client import ExaSearchClient
 
 
 def main() -> None:
+    """
+    Exa API 검색이 가능한지 확인하고 샘플 결과를 출력합니다.
+
+    @returns {None} 표준 출력으로 결과를 표시합니다.
+    """
     client = ExaSearchClient()
     if not client.available():
         print("EXA_API_KEY가 설정되지 않았습니다.")

@@ -37,12 +37,26 @@ class TechCardService:
         snapshot_store: Optional[SnapshotStore] = None,
         web_search: Optional[WebSearchService] = None,
     ) -> None:
+        """
+        기술 카드 생성에 필요한 의존성을 초기화합니다.
+
+        @param {Optional[SnapshotStore]} snapshot_store - 스냅샷 저장소.
+        @param {Optional[WebSearchService]} web_search - 웹 검색 서비스.
+        @returns {None} 내부 서비스 구성을 완료합니다.
+        """
         self.snapshot_store = snapshot_store or SnapshotStore()
         self._reel = ReelPipeline()
         self._doc_watcher = DocWatcher()
         self._web_search = web_search or WebSearchService()
 
     def get_or_create(self, tech_slug: str, prompt_version: str = "tech_card_v1") -> Dict[str, object]:
+        """
+        기술 카드 스냅샷을 조회하거나 새로 생성합니다.
+
+        @param {str} tech_slug - 기술 식별자.
+        @param {str} prompt_version - 프롬프트 버전.
+        @returns {Dict[str, object]} 기술 카드 페이로드.
+        """
         sources = self._resolve_sources(tech_slug)
         source_hash = self._source_hash(tech_slug, sources)
         snapshot = self.snapshot_store.get_or_create(
@@ -54,6 +68,14 @@ class TechCardService:
         return snapshot.payload
 
     def _compose_card(self, tech_slug: str, sources: List[Dict[str, str]], prompt_version: str) -> Dict[str, object]:
+        """
+        기술 카드 페이로드를 구성합니다.
+
+        @param {str} tech_slug - 기술 식별자.
+        @param {List[Dict[str, str]]} sources - 문서 소스 목록.
+        @param {str} prompt_version - 프롬프트 버전.
+        @returns {Dict[str, object]} 카드 페이로드.
+        """
         chunks = self._chunk_sources(tech_slug, sources)
         _ = self._index_chunks(chunks)
         summary = map_reduce_summary([source["content"] for source in sources])
@@ -107,6 +129,12 @@ class TechCardService:
         return payload
 
     def _resolve_sources(self, tech_slug: str) -> List[Dict[str, str]]:
+        """
+        로컬/웹 문서를 합쳐 기술 소스를 수집합니다.
+
+        @param {str} tech_slug - 기술 식별자.
+        @returns {List[Dict[str, str]]} 소스 목록.
+        """
         local_sources = [
             {
                 **source,
@@ -121,6 +149,13 @@ class TechCardService:
         return merged
 
     def _source_hash(self, tech_slug: str, sources: List[Dict[str, str]]) -> str:
+        """
+        기술 카드 소스의 해시 키를 생성합니다.
+
+        @param {str} tech_slug - 기술 식별자.
+        @param {List[Dict[str, str]]} sources - 소스 목록.
+        @returns {str} 해시 문자열.
+        """
         normalized = []
         for source in sources:
             normalized.append(
@@ -134,6 +169,12 @@ class TechCardService:
         return stable_hash_json({"slug": tech_slug, "sources": normalized})
 
     def _calc_reliability(self, sources: List[Dict[str, str]]) -> Dict[str, object]:
+        """
+        소스 신뢰도 지표를 계산합니다.
+
+        @param {List[Dict[str, str]]} sources - 소스 목록.
+        @returns {Dict[str, object]} 신뢰도 지표.
+        """
         if not sources:
             return {"community_score": 40, "doc_freshness": 0, "source_count": 0}
         scores = [float(source.get("score") or _DEFAULT_SOURCE_SCORE) for source in sources]
@@ -157,6 +198,12 @@ class TechCardService:
         }
 
     def _detect_changes(self, sources: List[Dict[str, str]]) -> Dict[str, object]:
+        """
+        소스 간 변경사항을 비교합니다.
+
+        @param {List[Dict[str, str]]} sources - 소스 목록.
+        @returns {Dict[str, object]} 변경 요약.
+        """
         if len(sources) < 2:
             return {"changed": False, "change_ratio": 0.0, "summary": ""}
         before = sources[0]["content"]
@@ -165,6 +212,14 @@ class TechCardService:
         return {"changed": change.changed, "change_ratio": change.change_ratio, "summary": change.summary}
 
     def _chunk_sources(self, tech_slug: str, sources: List[Dict[str, str]], chunk_size: int = 320) -> List[SourceChunk]:
+        """
+        문서를 청킹하여 벡터 인덱싱용 조각을 만듭니다.
+
+        @param {str} tech_slug - 기술 식별자.
+        @param {List[Dict[str, str]]} sources - 소스 목록.
+        @param {int} chunk_size - 청크 크기.
+        @returns {List[SourceChunk]} 청킹된 조각 목록.
+        """
         chunks: List[SourceChunk] = []
         splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=40)
         for source_idx, source in enumerate(sources):
@@ -182,6 +237,12 @@ class TechCardService:
         return chunks
 
     def _index_chunks(self, chunks: List[SourceChunk]) -> InMemoryVectorStore:
+        """
+        청크를 벡터 스토어에 인덱싱합니다.
+
+        @param {List[SourceChunk]} chunks - 청킹된 조각.
+        @returns {InMemoryVectorStore} 인덱싱된 벡터 스토어.
+        """
         store = InMemoryVectorStore()
         items = [
             VectorItem(
@@ -195,6 +256,12 @@ class TechCardService:
         return store
 
     def _dedupe_sources(self, sources: List[Dict[str, str]]) -> List[Dict[str, str]]:
+        """
+        URL 기준으로 중복 소스를 제거합니다.
+
+        @param {List[Dict[str, str]]} sources - 소스 목록.
+        @returns {List[Dict[str, str]]} 중복 제거된 소스 목록.
+        """
         seen = set()
         deduped = []
         for source in sources:

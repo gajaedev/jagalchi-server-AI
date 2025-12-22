@@ -7,6 +7,11 @@ from jagalchi_ai.ai_core.service.record.record_coach import RecordCoachService
 
 class CacheTests(unittest.TestCase):
     def test_record_coach_cache_hit(self) -> None:
+        """
+        동일 입력에서 캐시가 히트되는지 검증합니다.
+
+        @returns {None} 테스트만 수행합니다.
+        """
         store = SnapshotStore()
         service = RecordCoachService(snapshot_store=store)
         record = LEARNING_RECORDS[0]

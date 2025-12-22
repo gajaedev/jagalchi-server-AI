@@ -7,6 +7,11 @@ from jagalchi_ai.ai_core.service.progress.progress_tracking_service import Progr
 
 class ProgressTrackingTests(unittest.TestCase):
     def test_unlock_flow(self) -> None:
+        """
+        완료 노드 기준으로 다음 노드가 해제되는지 검증합니다.
+
+        @returns {None} 테스트만 수행합니다.
+        """
         roadmap = ROADMAPS["rm_frontend"]
         tracker = ProgressTrackingService()
         tracker.initialize("user_1", roadmap)
@@ -15,6 +20,11 @@ class ProgressTrackingTests(unittest.TestCase):
         self.assertIn("node_css", unlocked)
 
     def test_spaced_repetition(self) -> None:
+        """
+        간격 반복 로직이 복습 상태를 생성하는지 검증합니다.
+
+        @returns {None} 테스트만 수행합니다.
+        """
         roadmap = ROADMAPS["rm_frontend"]
         tracker = ProgressTrackingService()
         tracker.initialize("user_1", roadmap)

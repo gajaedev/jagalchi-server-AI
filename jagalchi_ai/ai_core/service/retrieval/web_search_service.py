@@ -93,7 +93,11 @@ class SearchResult:
     metadata: Dict[str, Any] = None
 
     def __post_init__(self) -> None:
-        """초기화 후 메타데이터 기본값 설정."""
+        """
+        초기화 후 메타데이터 기본값을 설정합니다.
+
+        @returns None
+        """
         if self.metadata is None:
             self.metadata = {}
 
@@ -101,8 +105,7 @@ class SearchResult:
         """
         결과를 딕셔너리로 변환합니다.
 
-        Returns:
-            Dict[str, Any]: 검색 결과 딕셔너리.
+        @returns 검색 결과 딕셔너리.
         """
         return {
             "title": self.title,
@@ -179,6 +182,11 @@ class WebSearchService:
             >>> # 커스텀 클라이언트 사용
             >>> tavily = TavilySearchClient(api_key="your-key")
             >>> service = WebSearchService(tavily_client=tavily)
+
+        @param tavily_client Tavily 검색 클라이언트.
+        @param exa_client Exa 검색 클라이언트.
+        @param snapshot_store 스냅샷 저장소.
+        @returns None
         """
         # 검색 클라이언트 초기화
         self._tavily = tavily_client or TavilySearchClient()
@@ -213,8 +221,7 @@ class WebSearchService:
 
         환경변수로 비활성화되었거나 사용 가능한 검색 엔진이 없으면 False.
 
-        Returns:
-            bool: 서비스 사용 가능 여부.
+        @returns 서비스 사용 가능 여부.
         """
         # 환경변수로 비활성화 확인
         if os.getenv("AI_DISABLE_EXTERNAL", "").lower() == "true":
@@ -227,8 +234,7 @@ class WebSearchService:
         """
         사용 가능한 검색 엔진 목록을 반환합니다.
 
-        Returns:
-            List[str]: 사용 가능한 엔진 이름 리스트.
+        @returns 사용 가능한 엔진 이름 리스트.
         """
         engines = []
         if self._tavily.available:
@@ -248,8 +254,7 @@ class WebSearchService:
         Note:
             is_available 프로퍼티 사용을 권장합니다.
 
-        Returns:
-            bool: 사용 가능 여부.
+        @returns 사용 가능 여부.
         """
         return self.is_available
 
@@ -280,9 +285,11 @@ class WebSearchService:
             use_cache:
                 캐시 사용 여부 (기본: True).
 
-        Returns:
-            List[Dict[str, Any]]: 검색 결과 리스트.
-                각 결과는 title, url, content, score, source, fetched_at 필드를 포함.
+        @param query 검색 쿼리.
+        @param top_k 반환할 최대 결과 수.
+        @param engine 사용할 검색 엔진.
+        @param use_cache 캐시 사용 여부.
+        @returns 검색 결과 리스트(딕셔너리 배열).
 
         Example:
             >>> results = service.search("Python 학습", top_k=10)
@@ -325,16 +332,9 @@ class WebSearchService:
         """
         검색 결과와 메타데이터를 함께 반환합니다.
 
-        Args:
-            query: 검색 쿼리.
-            top_k: 최대 결과 수.
-
-        Returns:
-            Dict[str, Any]: 결과와 메타데이터를 포함한 딕셔너리.
-                - query: 검색 쿼리
-                - results: 검색 결과 리스트
-                - generated_at: 생성 시각
-                - engines_used: 사용된 검색 엔진
+        @param query 검색 쿼리.
+        @param top_k 최대 결과 수.
+        @returns 결과와 메타데이터를 포함한 딕셔너리.
         """
         engines = self._get_engines_to_use(SearchEngine.ALL)
         return self._fetch(query, top_k, engines)
@@ -350,13 +350,10 @@ class WebSearchService:
 
         검색 결과를 LLM이 사용하기 좋은 형식으로 포맷팅합니다.
 
-        Args:
-            query: 검색 쿼리.
-            top_k: 포함할 최대 결과 수.
-            max_chars: 최대 문자 수.
-
-        Returns:
-            str: RAG용 포맷팅된 컨텍스트.
+        @param query 검색 쿼리.
+        @param top_k 포함할 최대 결과 수.
+        @param max_chars 최대 문자 수.
+        @returns RAG용 포맷팅된 컨텍스트 문자열.
 
         Example:
             >>> context = service.get_search_context("Python 비동기")
@@ -391,11 +388,8 @@ class WebSearchService:
         """
         사용할 검색 엔진 목록을 결정합니다.
 
-        Args:
-            engine: 요청된 검색 엔진.
-
-        Returns:
-            List[str]: 실제로 사용할 엔진 목록.
+        @param engine 요청된 검색 엔진.
+        @returns 실제로 사용할 엔진 목록.
         """
         if not self.is_available:
             return []
@@ -416,13 +410,10 @@ class WebSearchService:
         """
         실제 검색을 수행하고 결과를 반환합니다.
 
-        Args:
-            query: 검색 쿼리.
-            top_k: 최대 결과 수.
-            engines: 사용할 엔진 목록.
-
-        Returns:
-            Dict[str, Any]: 검색 결과 페이로드.
+        @param query 검색 쿼리.
+        @param top_k 최대 결과 수.
+        @param engines 사용할 엔진 목록.
+        @returns 검색 결과 페이로드.
         """
         if not engines:
             return self._create_empty_response(query)
@@ -468,13 +459,10 @@ class WebSearchService:
         """
         Tavily 검색을 수행합니다.
 
-        Args:
-            query: 검색 쿼리.
-            top_k: 최대 결과 수.
-            today: 오늘 날짜 문자열.
-
-        Returns:
-            List[Dict[str, Any]]: Tavily 검색 결과.
+        @param query 검색 쿼리.
+        @param top_k 최대 결과 수.
+        @param today 오늘 날짜 문자열.
+        @returns Tavily 검색 결과 리스트.
         """
         results = []
         try:
@@ -504,13 +492,10 @@ class WebSearchService:
         """
         Exa 검색을 수행합니다.
 
-        Args:
-            query: 검색 쿼리.
-            top_k: 최대 결과 수.
-            today: 오늘 날짜 문자열.
-
-        Returns:
-            List[Dict[str, Any]]: Exa 검색 결과.
+        @param query 검색 쿼리.
+        @param top_k 최대 결과 수.
+        @param today 오늘 날짜 문자열.
+        @returns Exa 검색 결과 리스트.
         """
         results = []
         try:
@@ -535,11 +520,8 @@ class WebSearchService:
         """
         빈 응답을 생성합니다.
 
-        Args:
-            query: 검색 쿼리.
-
-        Returns:
-            Dict[str, Any]: 빈 결과 페이로드.
+        @param query 검색 쿼리.
+        @returns 빈 결과 페이로드.
         """
         return {
             "query": query,
@@ -557,12 +539,9 @@ class WebSearchService:
         """
         검색 결과를 RAG 컨텍스트용으로 포맷팅합니다.
 
-        Args:
-            result: 검색 결과 딕셔너리.
-            index: 결과 순번.
-
-        Returns:
-            str: 포맷팅된 결과 문자열.
+        @param result 검색 결과 딕셔너리.
+        @param index 결과 순번.
+        @returns 포맷팅된 결과 문자열.
         """
         title = result.get("title", "제목 없음")
         url = result.get("url", "")
@@ -591,8 +570,7 @@ class WebSearchService:
         """
         서비스 상태를 확인합니다.
 
-        Returns:
-            Dict[str, Any]: 상태 정보.
+        @returns 상태 정보.
         """
         return {
             "available": self.is_available,
@@ -604,7 +582,9 @@ class WebSearchService:
         }
 
     def __repr__(self) -> str:
-        """디버깅용 문자열 표현."""
+        """
+        @returns 디버깅용 문자열 표현.
+        """
         return (
             f"WebSearchService("
             f"available={self.is_available}, "
@@ -623,11 +603,8 @@ def _dedupe_results(results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     URL을 기준으로 중복을 제거하며, 점수가 높은 결과를 유지합니다.
     결과는 점수 기준 내림차순으로 정렬됩니다.
 
-    Args:
-        results: 중복 제거할 검색 결과 리스트.
-
-    Returns:
-        List[Dict[str, Any]]: 중복이 제거되고 정렬된 결과 리스트.
+    @param results 중복 제거할 검색 결과 리스트.
+    @returns 중복이 제거되고 정렬된 결과 리스트.
     """
     if not results:
         return []
@@ -661,12 +638,9 @@ def merge_search_results(
     """
     여러 검색 결과 리스트를 병합합니다.
 
-    Args:
-        *result_lists: 병합할 검색 결과 리스트들.
-        top_k: 반환할 최대 결과 수.
-
-    Returns:
-        List[Dict[str, Any]]: 병합된 결과 리스트.
+    @param result_lists 병합할 검색 결과 리스트들.
+    @param top_k 반환할 최대 결과 수.
+    @returns 병합된 결과 리스트.
     """
     all_results = []
     for results in result_lists:

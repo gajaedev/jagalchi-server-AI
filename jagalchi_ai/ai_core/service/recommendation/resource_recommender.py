@@ -24,11 +24,21 @@ class ResourceRecommendationService:
         snapshot_store: Optional[SnapshotStore] = None,
         web_search: Optional[WebSearchService] = None,
     ) -> None:
+        """
+        @param snapshot_store 스냅샷 캐시 저장소.
+        @param web_search 외부 검색 서비스.
+        @returns None
+        """
         self._snapshot_store = snapshot_store or SnapshotStore()
         self._retriever = self._build_retriever()
         self._web_search = web_search or WebSearchService(snapshot_store=self._snapshot_store)
 
     def recommend(self, query: str, top_k: int = 5) -> Dict[str, object]:
+        """
+        @param query 검색 질의.
+        @param top_k 추천 개수.
+        @returns 자료 추천 결과 JSON.
+        """
         cache_key = stable_hash_json(
             {"query": query, "top_k": top_k, "web": self._web_search.available()}
         )
@@ -40,6 +50,11 @@ class ResourceRecommendationService:
         return snapshot.payload
 
     def _build_payload(self, query: str, top_k: int) -> Dict[str, object]:
+        """
+        @param query 검색 질의.
+        @param top_k 추천 개수.
+        @returns 추천 결과 페이로드.
+        """
         local_results = self._retriever.search(query, top_k=top_k)
         local_items = [
             {
@@ -81,6 +96,9 @@ class ResourceRecommendationService:
         }
 
     def _build_retriever(self) -> HybridRetriever:
+        """
+        @returns 로컬 문서 기반 하이브리드 리트리버.
+        """
         bm25 = BM25Index()
         documents: List[Document] = []
         for tech_slug, sources in TECH_SOURCES.items():
@@ -124,6 +142,12 @@ class ResourceRecommendationService:
 
 
 def _merge_items(web_items: List[Dict[str, object]], local_items: List[Dict[str, object]], top_k: int) -> List[Dict[str, object]]:
+    """
+    @param web_items 웹 검색 결과 리스트.
+    @param local_items 로컬 검색 결과 리스트.
+    @param top_k 반환할 최대 개수.
+    @returns 병합된 추천 아이템 리스트.
+    """
     normalized_web = _normalize_items(web_items)
     normalized_local = _normalize_items(local_items)
     for item in normalized_web:
@@ -133,6 +157,10 @@ def _merge_items(web_items: List[Dict[str, object]], local_items: List[Dict[str,
 
 
 def _normalize_items(items: List[Dict[str, object]]) -> List[Dict[str, object]]:
+    """
+    @param items 점수 포함 아이템 리스트.
+    @returns 최대 점수 기준 정규화된 리스트.
+    """
     if not items:
         return []
     max_score = max(float(item.get("score") or 0.0) for item in items) or 1.0

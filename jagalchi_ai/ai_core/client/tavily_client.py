@@ -168,6 +168,8 @@ class TavilySearchOptions(BaseModel):
         Tavily API 호환 파라미터 딕셔너리로 변환합니다.
 
         None 값인 필드는 제외하여 API 호출 시 불필요한 파라미터 전달을 막습니다.
+
+        @returns {Dict[str, Any]} Tavily API 파라미터 딕셔너리.
         """
         data = self.model_dump(exclude_none=True)
         # API에서 days가 0이거나 None이면 무시하도록 처리
@@ -197,6 +199,11 @@ def create_retry_decorator(
 
     Returns:
         함수를 래핑하는 데코레이터
+
+    @param {int} max_retries - 최대 재시도 횟수.
+    @param {float} min_wait - 최소 대기 시간(초).
+    @param {float} max_wait - 최대 대기 시간(초).
+    @returns {Callable} 재시도 데코레이터.
     """
     if TENACITY_AVAILABLE:
         return retry(
@@ -209,8 +216,21 @@ def create_retry_decorator(
     
     # Tenacity가 없는 경우 (No-op)
     def fallback_decorator(func: Callable) -> Callable:
+        """
+        재시도 미지원 환경에서 원본 함수를 그대로 반환합니다.
+
+        @param {Callable} func - 래핑 대상 함수.
+        @returns {Callable} 원본 함수.
+        """
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
+            """
+            원본 함수를 그대로 호출합니다.
+
+            @param {Any} args - 위치 인자.
+            @param {Any} kwargs - 키워드 인자.
+            @returns {Any} 원본 함수의 반환값.
+            """
             return func(*args, **kwargs)
         return wrapper
     
@@ -245,6 +265,11 @@ class TavilySearchClient:
             api_key: API 키. 제공되지 않으면 환경변수 `TAVILY_API_KEY`를 사용합니다.
             timeout: 요청 타임아웃 (초).
             max_retries: 요청 실패 시 최대 재시도 횟수.
+
+        @param {Optional[str]} api_key - Tavily API 키.
+        @param {int} timeout - 요청 타임아웃(초).
+        @param {int} max_retries - 최대 재시도 횟수.
+        @returns {None} 클라이언트를 초기화합니다.
         """
         # API 키 로드 (인자 -> 환경변수 순)
         self._api_key = api_key or os.getenv("TAVILY_API_KEY", "")
@@ -261,6 +286,8 @@ class TavilySearchClient:
         """
         내부 Tavily 클라이언트를 안전하게 초기화합니다.
         SDK 미설치, API 키 누락, 비활성화 설정 등을 체크합니다.
+
+        @returns {None} 내부 클라이언트를 초기화합니다.
         """
         if self._disabled:
             logger.info("외부 API 호출이 비활성화되었습니다 (AI_DISABLE_EXTERNAL=True).")
@@ -283,7 +310,11 @@ class TavilySearchClient:
 
     @property
     def available(self) -> bool:
-        """클라이언트가 사용 가능한 상태인지 확인합니다."""
+        """
+        클라이언트가 사용 가능한 상태인지 확인합니다.
+
+        @returns {bool} 사용 가능 여부.
+        """
         return self._client is not None and not self._disabled
 
     # -------------------------------------------------------------------------
@@ -309,6 +340,13 @@ class TavilySearchClient:
 
         Returns:
             검색 결과 리스트 (TavilyResult 객체의 리스트)
+
+        @param {str} query - 검색어.
+        @param {int} max_results - 최대 결과 수.
+        @param {SearchDepth} search_depth - 검색 깊이.
+        @param {bool} include_raw_content - 본문 포함 여부.
+        @param {Any} kwargs - 기타 옵션.
+        @returns {List[TavilyResult]} 검색 결과 리스트.
         """
         options = TavilySearchOptions(
             max_results=max_results,
@@ -332,6 +370,10 @@ class TavilySearchClient:
 
         Returns:
             검색 결과 리스트
+
+        @param {str} query - 검색어.
+        @param {TavilySearchOptions} options - 검색 옵션 객체.
+        @returns {List[TavilyResult]} 검색 결과 리스트.
         """
         if not self.available:
             logger.warning("Tavily 클라이언트를 사용할 수 없습니다.")
@@ -366,6 +408,12 @@ class TavilySearchClient:
 
         Returns:
             검색 결과 리스트 (Coroutine)
+
+        @param {str} query - 검색어.
+        @param {int} max_results - 최대 결과 수.
+        @param {SearchDepth} search_depth - 검색 깊이.
+        @param {Any} kwargs - 기타 옵션.
+        @returns {List[TavilyResult]} 검색 결과 리스트.
         """
         options = TavilySearchOptions(
             max_results=max_results,
@@ -381,6 +429,10 @@ class TavilySearchClient:
     ) -> List[TavilyResult]:
         """
         옵션 객체를 사용하여 비동기 검색을 수행합니다.
+
+        @param {str} query - 검색어.
+        @param {TavilySearchOptions} options - 검색 옵션 객체.
+        @returns {List[TavilyResult]} 검색 결과 리스트.
         """
         if not self.available:
             return []
@@ -407,6 +459,11 @@ class TavilySearchClient:
 
         Returns:
             뉴스 검색 결과 리스트
+
+        @param {str} query - 검색어.
+        @param {int} days - 검색 기간(일).
+        @param {int} max_results - 최대 결과 수.
+        @returns {List[TavilyResult]} 뉴스 검색 결과 리스트.
         """
         options = TavilySearchOptions(
             topic=SearchTopic.NEWS,
@@ -433,6 +490,11 @@ class TavilySearchClient:
 
         Returns:
             포맷팅된 컨텍스트 문자열
+
+        @param {str} query - 검색어.
+        @param {int} max_results - 결과 수.
+        @param {int} max_tokens - 최대 토큰 수.
+        @returns {str} 컨텍스트 문자열.
         """
         results = await self.search_async(query, max_results=max_results)
         return self._format_results_to_context(results, max_tokens)
@@ -448,6 +510,10 @@ class TavilySearchClient:
     ) -> List[TavilyResult]:
         """
         실제 API 호출을 수행하는 내부 메서드. (재시도 로직 적용됨)
+
+        @param {str} query - 검색어.
+        @param {TavilySearchOptions} options - 검색 옵션 객체.
+        @returns {List[TavilyResult]} 검색 결과 리스트.
         """
         try:
             params = options.to_api_params()
@@ -468,6 +534,9 @@ class TavilySearchClient:
     def _parse_response(self, raw_response: Dict[str, Any]) -> List[TavilyResult]:
         """
         API 원본 응답을 도메인 모델(TavilyResult)로 변환합니다.
+
+        @param {Dict[str, Any]} raw_response - 원본 응답.
+        @returns {List[TavilyResult]} 파싱된 결과 리스트.
         """
         results: List[TavilyResult] = []
         raw_items = raw_response.get("results", [])
@@ -508,6 +577,10 @@ class TavilySearchClient:
     ) -> str:
         """
         검색 결과를 LLM 컨텍스트 포맷으로 변환합니다.
+
+        @param {List[TavilyResult]} results - 검색 결과 리스트.
+        @param {int} max_chars_approx - 최대 문자 수 추정치.
+        @returns {str} 컨텍스트 문자열.
         """
         if not results:
             return ""

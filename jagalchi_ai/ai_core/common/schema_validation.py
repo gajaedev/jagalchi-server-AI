@@ -8,6 +8,10 @@ class SchemaError(ValueError):
 
 
 def validate_record_coach_output(payload: Dict[str, Any]) -> None:
+    """
+    @param payload Record Coach 결과 JSON.
+    @returns None
+    """
     _require_fields(payload, [
         "record_id",
         "model_version",
@@ -31,6 +35,10 @@ def validate_record_coach_output(payload: Dict[str, Any]) -> None:
 
 
 def validate_related_roadmaps_output(payload: Dict[str, Any]) -> None:
+    """
+    @param payload 연관 로드맵 추천 결과 JSON.
+    @returns None
+    """
     _require_fields(payload, [
         "roadmap_id",
         "generated_at",
@@ -42,6 +50,10 @@ def validate_related_roadmaps_output(payload: Dict[str, Any]) -> None:
 
 
 def validate_tech_card_output(payload: Dict[str, Any]) -> None:
+    """
+    @param payload 기술 카드 결과 JSON.
+    @returns None
+    """
     _require_fields(payload, [
         "tech_slug",
         "version",
@@ -63,11 +75,19 @@ def validate_tech_card_output(payload: Dict[str, Any]) -> None:
 
 
 def validate_tech_fingerprint_output(payload: Dict[str, Any]) -> None:
+    """
+    @param payload 기술 지문 결과 JSON.
+    @returns None
+    """
     _require_fields(payload, ["roadmap_id", "tags", "generated_at", "model_version"])
     _require_types(payload["tags"], list, "tags")
 
 
 def validate_comment_digest_output(payload: Dict[str, Any]) -> None:
+    """
+    @param payload 코멘트 다이제스트 결과 JSON.
+    @returns None
+    """
     _require_fields(payload, [
         "roadmap_id",
         "period",
@@ -80,6 +100,10 @@ def validate_comment_digest_output(payload: Dict[str, Any]) -> None:
 
 
 def validate_roadmap_generation_output(payload: Dict[str, Any]) -> None:
+    """
+    @param payload 로드맵 생성 결과 JSON.
+    @returns None
+    """
     _require_fields(payload, [
         "roadmap_id",
         "title",
@@ -98,18 +122,30 @@ def validate_roadmap_generation_output(payload: Dict[str, Any]) -> None:
 
 
 def validate_resource_recommendation_output(payload: Dict[str, Any]) -> None:
+    """
+    @param payload 자료 추천 결과 JSON.
+    @returns None
+    """
     _require_fields(payload, ["query", "generated_at", "items", "model_version", "retrieval_evidence"])
     _require_types(payload["items"], list, "items")
     _require_types(payload["retrieval_evidence"], list, "retrieval_evidence")
 
 
 def validate_learning_pattern_output(payload: Dict[str, Any]) -> None:
+    """
+    @param payload 학습 패턴 분석 결과 JSON.
+    @returns None
+    """
     _require_fields(payload, ["user_id", "period", "patterns", "recommendations", "model_version", "generated_at"])
     _require_types(payload["patterns"], dict, "patterns")
     _require_types(payload["recommendations"], list, "recommendations")
 
 
 def validate_learning_coach_output(payload: Dict[str, Any]) -> None:
+    """
+    @param payload 학습 코치 결과 JSON.
+    @returns None
+    """
     _require_fields(payload, [
         "user_id",
         "question",
@@ -131,6 +167,10 @@ def validate_learning_coach_output(payload: Dict[str, Any]) -> None:
 
 
 def validate_roadmap_recommendation_output(payload: Dict[str, Any]) -> None:
+    """
+    @param payload 로드맵 추천 결과 JSON.
+    @returns None
+    """
     _require_fields(payload, [
         "roadmap_id",
         "target_role",
@@ -146,21 +186,40 @@ def validate_roadmap_recommendation_output(payload: Dict[str, Any]) -> None:
 
 
 def validate_insights_output(payload: Dict[str, Any]) -> None:
+    """
+    @param payload 인사이트 결과 JSON.
+    @returns None
+    """
     _require_fields(payload, ["user_id", "target_role", "gap_set", "generated_at"])
     _require_types(payload["gap_set"], list, "gap_set")
 
 
 def validate_reliability_output(payload: Dict[str, Any]) -> None:
+    """
+    @param payload 신뢰도 결과 JSON.
+    @returns None
+    """
     _require_fields(payload, ["user_scores", "generated_at", "model_version"])
     _require_types(payload["user_scores"], dict, "user_scores")
 
 
 def _require_fields(payload: Dict[str, Any], fields: List[str]) -> None:
+    """
+    @param payload 점검 대상 JSON.
+    @param fields 필수 필드 목록.
+    @returns None
+    """
     missing = [field for field in fields if field not in payload]
     if missing:
         raise SchemaError(f"Missing fields: {missing}")
 
 
 def _require_types(value: Any, expected_type: type, field_name: str) -> None:
+    """
+    @param value 점검 대상 값.
+    @param expected_type 기대 타입.
+    @param field_name 필드 이름.
+    @returns None
+    """
     if not isinstance(value, expected_type):
         raise SchemaError(f"Field {field_name} should be {expected_type.__name__}")

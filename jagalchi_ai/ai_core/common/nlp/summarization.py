@@ -8,6 +8,11 @@ from jagalchi_ai.ai_core.common.nlp.text_utils import extract_sentences, tokeniz
 
 
 def textrank_sentences(text: str, top_n: int = 2) -> List[str]:
+    """
+    @param text 요약 대상 원문.
+    @param top_n 선택할 문장 수.
+    @returns TextRank 기반 상위 문장 리스트.
+    """
     sentences = extract_sentences(text)
     if not sentences:
         return []
@@ -22,6 +27,12 @@ def textrank_sentences(text: str, top_n: int = 2) -> List[str]:
 
 
 def hybrid_summary(text: str, llm_client: Optional[GeminiClient] = None, top_n: int = 2) -> str:
+    """
+    @param text 요약 대상 원문.
+    @param llm_client LLM 클라이언트(있으면 문장화 보정).
+    @param top_n 추출 요약 문장 수.
+    @returns 추출+LLM 보정 요약 문자열.
+    """
     extractive = " ".join(textrank_sentences(text, top_n=top_n))
     if not llm_client or not llm_client.available():
         return extractive
@@ -34,6 +45,11 @@ def hybrid_summary(text: str, llm_client: Optional[GeminiClient] = None, top_n: 
 
 
 def map_reduce_summary(texts: List[str], llm_client: Optional[GeminiClient] = None) -> str:
+    """
+    @param texts 요약 대상 텍스트 리스트.
+    @param llm_client LLM 클라이언트(있으면 최종 보정).
+    @returns Map-Reduce 요약 문자열.
+    """
     if not texts:
         return ""
     mapped = [" ".join(textrank_sentences(text, top_n=2)) for text in texts]
@@ -42,6 +58,10 @@ def map_reduce_summary(texts: List[str], llm_client: Optional[GeminiClient] = No
 
 
 def _sentence_similarity(sentences: List[str]) -> List[List[float]]:
+    """
+    @param sentences 문장 리스트.
+    @returns 문장 간 유사도 행렬.
+    """
     tokens = [set(tokenize(sentence)) for sentence in sentences]
     size = len(sentences)
     matrix = [[0.0 for _ in range(size)] for _ in range(size)]
@@ -56,6 +76,12 @@ def _sentence_similarity(sentences: List[str]) -> List[List[float]]:
 
 
 def _pagerank(similarity: List[List[float]], damping: float = 0.85, iterations: int = 20) -> Dict[int, float]:
+    """
+    @param similarity 유사도 행렬.
+    @param damping 감쇠 계수.
+    @param iterations 반복 횟수.
+    @returns 문장 인덱스별 PageRank 점수.
+    """
     size = len(similarity)
     scores = {idx: 1.0 / size for idx in range(size)}
     for _ in range(iterations):

@@ -14,10 +14,17 @@ class BM25Index:
     """BM25 기반 문서 검색 인덱스."""
 
     def __init__(self) -> None:
+        """
+        @returns None
+        """
         self._docs: List[LangchainDocument] = []
         self._retriever: BM25Retriever | None = None
 
     def add_documents(self, documents: Iterable[Document]) -> None:
+        """
+        @param documents 인덱싱할 문서 목록.
+        @returns None
+        """
         for doc in documents:
             if not doc.text:
                 continue
@@ -28,9 +35,17 @@ class BM25Index:
 
     @property
     def retriever(self) -> BM25Retriever | None:
+        """
+        @returns LangChain BM25Retriever 또는 None.
+        """
         return self._retriever
 
     def search(self, query: str, top_k: int = 5) -> List[RetrievalItem]:
+        """
+        @param query 검색 질의.
+        @param top_k 상위 결과 수.
+        @returns 검색 결과 리스트.
+        """
         if not self._retriever:
             return []
         self._retriever.k = top_k

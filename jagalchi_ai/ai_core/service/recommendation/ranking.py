@@ -24,6 +24,11 @@ DEFAULT_WEIGHTS = {
 
 
 def score_candidate(features: RankingFeature, weights: Dict[str, float] | None = None) -> float:
+    """
+    @param features 랭킹 피처 묶음.
+    @param weights 피처 가중치 맵.
+    @returns 가중 합산 점수.
+    """
     weights = weights or DEFAULT_WEIGHTS
     return (
         features.tag_overlap * weights["tag_overlap"]
@@ -36,6 +41,10 @@ def score_candidate(features: RankingFeature, weights: Dict[str, float] | None =
 
 
 def normalize_ranked(candidates: List[dict]) -> List[dict]:
+    """
+    @param candidates 점수 포함 후보 리스트.
+    @returns 최대 점수를 기준으로 정규화된 후보 리스트.
+    """
     if not candidates:
         return []
     max_score = max(candidate["score"] for candidate in candidates) or 1.0

@@ -13,9 +13,17 @@ class RelatedRoadmapsService:
     """연관 로드맵 추천 서비스."""
 
     def __init__(self, roadmaps: Optional[Dict[str, Roadmap]] = None) -> None:
+        """
+        @param roadmaps 로드맵 데이터 맵(없으면 목데이터 사용).
+        @returns None
+        """
         self._roadmaps = roadmaps or ROADMAPS
 
     def generate_snapshot(self, roadmap_id: str) -> Dict[str, object]:
+        """
+        @param roadmap_id 기준 로드맵 ID.
+        @returns 연관 로드맵 추천 스냅샷 JSON.
+        """
         roadmap = self._roadmaps[roadmap_id]
         candidates = self._generate_candidates(roadmap)
         ranked = self._rank_candidates(roadmap, candidates)
@@ -33,6 +41,10 @@ class RelatedRoadmapsService:
         return payload
 
     def _generate_candidates(self, roadmap: Roadmap) -> Dict[str, Dict[str, object]]:
+        """
+        @param roadmap 기준 로드맵 객체.
+        @returns 후보 로드맵과 사유를 담은 맵.
+        """
         candidates: Dict[str, Dict[str, object]] = {}
         source_id = roadmap.roadmap_id
 
@@ -63,6 +75,11 @@ class RelatedRoadmapsService:
         return candidates
 
     def _rank_candidates(self, roadmap: Roadmap, candidates: Dict[str, Dict[str, object]]) -> List[Dict[str, object]]:
+        """
+        @param roadmap 기준 로드맵 객체.
+        @param candidates 후보 로드맵 맵.
+        @returns 점수 순으로 정렬된 후보 리스트.
+        """
         ranked: List[Dict[str, object]] = []
         for related_id, payload in candidates.items():
             related = self._roadmaps.get(related_id)
@@ -91,6 +108,10 @@ class RelatedRoadmapsService:
 
 
 def _freshness_score(updated_at) -> float:
+    """
+    @param updated_at 마지막 업데이트 시각.
+    @returns 최신성 점수.
+    """
     if not updated_at:
         return 0.5
     delta = (datetime.utcnow() - updated_at).days
@@ -98,6 +119,10 @@ def _freshness_score(updated_at) -> float:
 
 
 def _popularity_score(raw: int) -> float:
+    """
+    @param raw 팔로워/인기도 원시 값.
+    @returns 로그 스케일 인기도 점수.
+    """
     if raw <= 0:
         return 0.0
     return log(raw + 1) / 10

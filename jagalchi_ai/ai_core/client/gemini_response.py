@@ -97,6 +97,8 @@ class GeminiResponse:
             >>> response = GeminiResponse(data=None, raw_text="")
             >>> response.is_valid
             False
+
+        @returns {bool} 응답 유효성 여부.
         """
         return self.data is not None and len(self.data) > 0
 
@@ -107,6 +109,8 @@ class GeminiResponse:
 
         Returns:
             bool: data가 None이거나 raw_text가 비어있으면 True.
+
+        @returns {bool} 응답이 비어있는지 여부.
         """
         return self.data is None or not self.raw_text.strip()
 
@@ -117,6 +121,8 @@ class GeminiResponse:
 
         Returns:
             int: raw_text의 문자 수.
+
+        @returns {int} 원본 텍스트 길이.
         """
         return len(self.raw_text)
 
@@ -140,6 +146,10 @@ class GeminiResponse:
         Example:
             >>> response.get("answer", "No answer found")
             'Hello World'
+
+        @param {str} key - 가져올 키.
+        @param {Any} default - 키가 없을 때 기본값.
+        @returns {Any} 해당 키의 값 또는 기본값.
         """
         if self.data is None:
             return default
@@ -162,6 +172,10 @@ class GeminiResponse:
             >>> # data = {"user": {"profile": {"name": "Alice"}}}
             >>> response.get_nested("user", "profile", "name")
             'Alice'
+
+        @param {...str} keys - 탐색할 키 목록.
+        @param {Any} default - 기본값.
+        @returns {Any} 중첩된 키의 값 또는 기본값.
         """
         if self.data is None:
             return default
@@ -188,6 +202,10 @@ class GeminiResponse:
 
         Returns:
             List[Any]: 해당 키의 리스트 값 또는 기본값.
+
+        @param {str} key - 가져올 키.
+        @param {Optional[List[Any]]} default - 기본값.
+        @returns {List[Any]} 리스트 값 또는 기본값.
         """
         if default is None:
             default = []
@@ -209,6 +227,10 @@ class GeminiResponse:
 
         Returns:
             str: 해당 키의 문자열 값 또는 기본값.
+
+        @param {str} key - 가져올 키.
+        @param {str} default - 기본값.
+        @returns {str} 문자열 값 또는 기본값.
         """
         value = self.get(key, default)
         if value is None:
@@ -225,6 +247,10 @@ class GeminiResponse:
 
         Returns:
             int: 해당 키의 정수 값 또는 기본값.
+
+        @param {str} key - 가져올 키.
+        @param {int} default - 기본값.
+        @returns {int} 정수 값 또는 기본값.
         """
         value = self.get(key, default)
         if isinstance(value, int):
@@ -244,6 +270,10 @@ class GeminiResponse:
 
         Returns:
             float: 해당 키의 실수 값 또는 기본값.
+
+        @param {str} key - 가져올 키.
+        @param {float} default - 기본값.
+        @returns {float} 실수 값 또는 기본값.
         """
         value = self.get(key, default)
         if isinstance(value, (int, float)):
@@ -263,6 +293,10 @@ class GeminiResponse:
 
         Returns:
             bool: 해당 키의 불리언 값 또는 기본값.
+
+        @param {str} key - 가져올 키.
+        @param {bool} default - 기본값.
+        @returns {bool} 불리언 값 또는 기본값.
         """
         value = self.get(key, default)
         if isinstance(value, bool):
@@ -281,6 +315,8 @@ class GeminiResponse:
 
         Returns:
             List[str]: 데이터의 키 리스트 (data가 None이면 빈 리스트).
+
+        @returns {List[str]} 데이터 키 목록.
         """
         if self.data is None:
             return []
@@ -295,6 +331,9 @@ class GeminiResponse:
 
         Returns:
             bool: 키가 존재하면 True.
+
+        @param {str} key - 확인할 키.
+        @returns {bool} 키 존재 여부.
         """
         if self.data is None:
             return False
@@ -308,6 +347,8 @@ class GeminiResponse:
 
         Returns:
             Dict[str, Any]: 응답 데이터를 담은 딕셔너리.
+
+        @returns {Dict[str, Any]} 응답 데이터 딕셔너리.
         """
         return {
             "data": self.data,
@@ -320,7 +361,11 @@ class GeminiResponse:
         }
 
     def __repr__(self) -> str:
-        """디버깅용 문자열 표현."""
+        """
+        디버깅용 문자열 표현을 반환합니다.
+
+        @returns {str} 디버깅 문자열.
+        """
         data_preview = str(self.data)[:50] + "..." if self.data and len(str(self.data)) > 50 else str(self.data)
         return (
             f"GeminiResponse("
@@ -345,6 +390,9 @@ def create_empty_response(model: Optional[str] = None) -> GeminiResponse:
 
     Returns:
         GeminiResponse: 빈 데이터를 가진 응답 객체.
+
+    @param {Optional[str]} model - 모델 이름.
+    @returns {GeminiResponse} 빈 응답 객체.
     """
     return GeminiResponse(
         data=None,
@@ -369,6 +417,10 @@ def create_error_response(
 
     Returns:
         GeminiResponse: 에러 정보를 담은 응답 객체.
+
+    @param {str} error_message - 에러 메시지.
+    @param {Optional[str]} model - 모델 이름.
+    @returns {GeminiResponse} 에러 응답 객체.
     """
     return GeminiResponse(
         data={"error": error_message},

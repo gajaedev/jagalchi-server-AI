@@ -14,6 +14,10 @@ _ERROR_PATTERN = re.compile(r"(error|exception|traceback|fail|failed|500|404)", 
 
 
 def evidence_level(record: LearningRecord) -> int:
+    """
+    @param record 학습 기록 객체.
+    @returns 근거 수준(0~3).
+    """
     if not record.memo.strip() and not record.links:
         return 0
     if record.memo.strip() and not record.links:
@@ -26,6 +30,10 @@ def evidence_level(record: LearningRecord) -> int:
 
 
 def structure_score(record: LearningRecord) -> int:
+    """
+    @param record 학습 기록 객체.
+    @returns 구조 점수(0~100).
+    """
     memo = record.memo.lower()
     sections = [
         _contains_any(memo, _GOAL_KEYWORDS),
@@ -37,6 +45,10 @@ def structure_score(record: LearningRecord) -> int:
 
 
 def specificity_score(record: LearningRecord) -> int:
+    """
+    @param record 학습 기록 객체.
+    @returns 구체성 점수(0~100).
+    """
     memo = record.memo
     digit_hits = len(re.findall(r"\d+", memo))
     error_hits = 1 if _ERROR_PATTERN.search(memo) else 0
@@ -46,6 +58,10 @@ def specificity_score(record: LearningRecord) -> int:
 
 
 def reproducibility_score(links: List[LinkMeta]) -> int:
+    """
+    @param links 링크 메타 리스트.
+    @returns 재현 가능성 점수(0~100).
+    """
     if not links:
         return 0
     valid = sum(1 for link in links if _is_verified(link))
@@ -53,6 +69,10 @@ def reproducibility_score(links: List[LinkMeta]) -> int:
 
 
 def quality_score(scores: Dict[str, int]) -> int:
+    """
+    @param scores 루브릭 점수 맵.
+    @returns 종합 품질 점수(0~100).
+    """
     evidence = scores.get("evidence_level", 0) / 3
     structure = scores.get("structure_score", 0) / 100
     specificity = scores.get("specificity_score", 0) / 100
@@ -62,6 +82,10 @@ def quality_score(scores: Dict[str, int]) -> int:
 
 
 def score_record(record: LearningRecord) -> Dict[str, int]:
+    """
+    @param record 학습 기록 객체.
+    @returns 루브릭 점수 맵.
+    """
     scores = {
         "evidence_level": evidence_level(record),
         "structure_score": structure_score(record),
@@ -73,8 +97,17 @@ def score_record(record: LearningRecord) -> Dict[str, int]:
 
 
 def _contains_any(text: str, keywords: List[str]) -> bool:
+    """
+    @param text 검색 대상 문자열.
+    @param keywords 포함 여부를 확인할 키워드 리스트.
+    @returns 하나라도 포함되면 True.
+    """
     return any(keyword in text for keyword in keywords)
 
 
 def _is_verified(link: LinkMeta) -> bool:
+    """
+    @param link 링크 메타 객체.
+    @returns 공개/응답코드 기준 검증 여부.
+    """
     return link.is_public and link.status_code and 200 <= link.status_code < 300

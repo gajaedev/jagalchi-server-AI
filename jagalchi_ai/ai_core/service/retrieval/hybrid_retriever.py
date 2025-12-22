@@ -10,6 +10,12 @@ from jagalchi_ai.ai_core.domain.retrieval_item import RetrievalItem
 
 class _RetrieverProtocol(Protocol):
     def get_relevant_documents(self, query: str):  # pragma: no cover - langchain interface
+        """
+        LangChain 리트리버 인터페이스를 만족하는 검색 메서드입니다.
+
+        @param {str} query - 검색 질의.
+        @returns {list} LangChain 문서 리스트.
+        """
         ...
 
 
@@ -17,10 +23,20 @@ class HybridRetriever:
     """LangChain 기반 하이브리드 검색기."""
 
     def __init__(self, retrievers: List[tuple[str, _RetrieverProtocol]], weights: Optional[Dict[str, float]] = None) -> None:
+        """
+        @param retrievers (이름, retriever) 튜플 리스트.
+        @param weights retriever 가중치 맵.
+        @returns None
+        """
         self._retrievers = retrievers
         self._weights = weights or {}
 
     def search(self, query: str, top_k: int = 5) -> List[RetrievalItem]:
+        """
+        @param query 검색 질의.
+        @param top_k 상위 결과 수.
+        @returns 하이브리드 검색 결과 리스트.
+        """
         retriever_list = []
         weights: List[float] = []
         for name, retriever in self._retrievers:
@@ -48,6 +64,11 @@ class HybridRetriever:
 
 
 def _apply_top_k(retriever: object, top_k: int) -> None:
+    """
+    @param retriever LangChain 리트리버 인스턴스.
+    @param top_k 상위 결과 수.
+    @returns None
+    """
     if hasattr(retriever, "k"):
         setattr(retriever, "k", top_k)
     elif hasattr(retriever, "search_kwargs"):

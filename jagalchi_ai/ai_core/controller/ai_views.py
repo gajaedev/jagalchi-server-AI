@@ -85,6 +85,10 @@ class DemoAIAPIView(APIView):
         ],
     )
     def get(self, request) -> Response:
+        """
+        @param request DRF 요청 객체 (쿼리 파라미터로 데모 입력을 받는다).
+        @returns 모든 AI 기능 결과를 합친 데모 응답 JSON.
+        """
         roadmap_id = request.GET.get("roadmap_id") or "rm_frontend"
         tech_slug = request.GET.get("tech_slug") or "react"
         user_id = request.GET.get("user_id") or "user_1"
@@ -153,6 +157,10 @@ class RecordCoachAPIView(APIView):
         responses=RecordCoachSerializer,
     )
     def get(self, request) -> Response:
+        """
+        @param request DRF 요청 객체 (roadmap_id/node_id/compose_level 사용).
+        @returns Record Coach 결과 JSON.
+        """
         roadmap = _resolve_roadmap(request.GET.get("roadmap_id") or "rm_frontend")
         node = _resolve_node(roadmap, request.GET.get("node_id"))
         compose_level = request.GET.get("compose_level") or "quick"
@@ -169,6 +177,10 @@ class RelatedRoadmapsAPIView(APIView):
         responses=RelatedRoadmapsSerializer,
     )
     def get(self, request) -> Response:
+        """
+        @param request DRF 요청 객체 (roadmap_id 사용).
+        @returns 연관 로드맵 추천 JSON.
+        """
         roadmap_id = request.GET.get("roadmap_id") or "rm_frontend"
         payload = _related_roadmaps(roadmap_id)
         return _serialize(RelatedRoadmapsSerializer, payload)
@@ -182,6 +194,10 @@ class TechCardAPIView(APIView):
         responses=TechCardSerializer,
     )
     def get(self, request) -> Response:
+        """
+        @param request DRF 요청 객체 (tech_slug 사용).
+        @returns 기술 카드 JSON.
+        """
         tech_slug = request.GET.get("tech_slug") or "react"
         payload = _tech_card(tech_slug)
         return _serialize(TechCardSerializer, payload)
@@ -203,6 +219,10 @@ class TechFingerprintAPIView(APIView):
         responses=TechFingerprintSerializer,
     )
     def get(self, request) -> Response:
+        """
+        @param request DRF 요청 객체 (roadmap_id/include_rationale 사용).
+        @returns 로드맵 기술 지문 JSON.
+        """
         roadmap = _resolve_roadmap(request.GET.get("roadmap_id") or "rm_frontend")
         include_rationale = request.GET.get("include_rationale") == "true"
         payload = _tech_fingerprint(roadmap, include_rationale)
@@ -220,6 +240,10 @@ class CommentDigestAPIView(APIView):
         responses=CommentDigestSerializer,
     )
     def get(self, request) -> Response:
+        """
+        @param request DRF 요청 객체 (roadmap_id/period_days 사용).
+        @returns 코멘트 다이제스트 JSON.
+        """
         roadmap_id = request.GET.get("roadmap_id") or "rm_frontend"
         period_days = int(request.GET.get("period_days") or 14)
         service = CommentIntelligenceService()
@@ -239,6 +263,10 @@ class CommentDuplicateAPIView(APIView):
         responses=DuplicateSuggestItemSerializer(many=True),
     )
     def get(self, request) -> Response:
+        """
+        @param request DRF 요청 객체 (roadmap_id/query/top_k 사용).
+        @returns 중복 질문 후보 배열 JSON.
+        """
         roadmap_id = request.GET.get("roadmap_id") or "rm_frontend"
         query = request.GET.get("query") or "React useEffect 에러 해결 방법"
         top_k = int(request.GET.get("top_k") or 3)
@@ -258,6 +286,10 @@ class ResourceRecommendationAPIView(APIView):
         responses=ResourceRecommendationSerializer,
     )
     def get(self, request) -> Response:
+        """
+        @param request DRF 요청 객체 (query/top_k 사용).
+        @returns 자료 추천 결과 JSON.
+        """
         query = request.GET.get("query") or "React useEffect 에러 해결 방법"
         top_k = int(request.GET.get("top_k") or 3)
         payload = _resource_recommendation(query, top_k)
@@ -275,6 +307,10 @@ class LearningPatternAPIView(APIView):
         responses=LearningPatternSerializer,
     )
     def get(self, request) -> Response:
+        """
+        @param request DRF 요청 객체 (user_id/days 사용).
+        @returns 학습 패턴 분석 JSON.
+        """
         user_id = request.GET.get("user_id") or "user_1"
         days = int(request.GET.get("days") or 30)
         payload = LearningPatternService().analyze(user_id, days=days)
@@ -292,6 +328,10 @@ class GraphRAGAPIView(APIView):
         responses=GraphRAGContextSerializer,
     )
     def get(self, request) -> Response:
+        """
+        @param request DRF 요청 객체 (query/top_k 사용).
+        @returns GraphRAG 컨텍스트 JSON.
+        """
         query = request.GET.get("query") or "React useEffect 에러 해결 방법"
         top_k = int(request.GET.get("top_k") or 3)
         graph_rag = GraphRAGService(mock_data.ROADMAPS)
@@ -318,6 +358,10 @@ class RoadmapGeneratedAPIView(APIView):
         responses=RoadmapGeneratedSerializer,
     )
     def get(self, request) -> Response:
+        """
+        @param request DRF 요청 객체 (goal/preferred_tags/max_nodes/compose_level 사용).
+        @returns 생성된 로드맵 JSON.
+        """
         goal = request.GET.get("goal") or "프론트엔드 심화"
         preferred_tags = request.GET.get("preferred_tags") or "frontend"
         tags = [tag.strip() for tag in preferred_tags.split(",") if tag.strip()]
@@ -351,6 +395,10 @@ class LearningCoachAPIView(APIView):
         responses=LearningCoachSerializer,
     )
     def get(self, request) -> Response:
+        """
+        @param request DRF 요청 객체 (user_id/question/compose_level 사용).
+        @returns 학습 코치 응답 JSON.
+        """
         user_id = request.GET.get("user_id") or "user_1"
         question = request.GET.get("question") or "React useEffect 에러 해결 방법"
         compose_level = request.GET.get("compose_level") or "quick"
@@ -370,6 +418,10 @@ class RoadmapRecommendationAPIView(APIView):
         responses=RoadmapRecommendationSerializer,
     )
     def get(self, request) -> Response:
+        """
+        @param request DRF 요청 객체 (target_role/user_id 사용).
+        @returns 그래프 기반 로드맵 추천 JSON.
+        """
         target_role = request.GET.get("target_role") or "frontend_dev"
         user_id = request.GET.get("user_id") or "user_1"
         payload = _roadmap_recommendation(target_role, user_id)
@@ -377,12 +429,21 @@ class RoadmapRecommendationAPIView(APIView):
 
 
 def _resolve_roadmap(roadmap_id: str):
+    """
+    @param roadmap_id 조회할 로드맵 ID.
+    @returns 로드맵 객체 (없으면 기본 로드맵).
+    """
     if roadmap_id in mock_data.ROADMAPS:
         return mock_data.ROADMAPS[roadmap_id]
     return next(iter(mock_data.ROADMAPS.values()))
 
 
 def _resolve_node(roadmap, node_id: str | None):
+    """
+    @param roadmap 로드맵 객체.
+    @param node_id 선택된 노드 ID (없으면 첫 노드 사용).
+    @returns 로드맵 노드 객체.
+    """
     if node_id:
         for node in roadmap.nodes:
             if node.node_id == node_id:
@@ -391,6 +452,11 @@ def _resolve_node(roadmap, node_id: str | None):
 
 
 def _build_record(node, roadmap):
+    """
+    @param node 대상 로드맵 노드.
+    @param roadmap 로드맵 객체.
+    @returns 기본 학습 기록 객체(데모용).
+    """
     base_record = mock_data.LEARNING_RECORDS[0]
     return LearningRecord(
         record_id=base_record.record_id,
@@ -402,22 +468,47 @@ def _build_record(node, roadmap):
 
 
 def _record_feedback(record, node, tags, compose_level: str):
+    """
+    @param record 학습 기록 객체.
+    @param node 로드맵 노드 객체.
+    @param tags 로드맵 태그 목록.
+    @param compose_level quick/full 출력 단계.
+    @returns Record Coach 피드백 JSON.
+    """
     return RecordCoachService().get_feedback(record, node, tags, compose_level=compose_level)
 
 
 def _related_roadmaps(roadmap_id: str):
+    """
+    @param roadmap_id 기준 로드맵 ID.
+    @returns 연관 로드맵 추천 JSON.
+    """
     return RelatedRoadmapsService(mock_data.ROADMAPS).generate_snapshot(roadmap_id)
 
 
 def _tech_card(tech_slug: str):
+    """
+    @param tech_slug 기술 카드 슬러그.
+    @returns 기술 카드 JSON.
+    """
     return TechCardService().get_or_create(tech_slug)
 
 
 def _tech_fingerprint(roadmap, include_rationale: bool):
+    """
+    @param roadmap 로드맵 객체.
+    @param include_rationale rationale 포함 여부.
+    @returns 기술 지문 태그 JSON.
+    """
     return TechFingerprintService().generate(roadmap, include_rationale=include_rationale)
 
 
 def _comment_insights(roadmap_id: str, question: str):
+    """
+    @param roadmap_id 로드맵 ID.
+    @param question 사용자 질문.
+    @returns (다이제스트, 중복 후보) 튜플.
+    """
     service = CommentIntelligenceService()
     digest = service.comment_digest(roadmap_id)
     duplicates = service.duplicate_suggest(roadmap_id, question, top_k=3)
@@ -425,14 +516,30 @@ def _comment_insights(roadmap_id: str, question: str):
 
 
 def _resource_recommendation(query: str, top_k: int):
+    """
+    @param query 검색 질의.
+    @param top_k 추천 개수.
+    @returns 자료 추천 JSON.
+    """
     return ResourceRecommendationService().recommend(query, top_k=top_k)
 
 
 def _learning_pattern(user_id: str):
+    """
+    @param user_id 사용자 ID.
+    @returns 학습 패턴 분석 JSON.
+    """
     return LearningPatternService().analyze(user_id)
 
 
 def _roadmap_generated(graph_rag, goal: str, preferred_tags, compose_level: str):
+    """
+    @param graph_rag GraphRAG 서비스 인스턴스.
+    @param goal 생성 목표.
+    @param preferred_tags 선호 태그 목록.
+    @param compose_level quick/full 출력 단계.
+    @returns 생성된 로드맵 JSON.
+    """
     return RoadmapGeneratorService(graph_rag=graph_rag).generate(
         goal,
         preferred_tags=preferred_tags,
@@ -441,6 +548,13 @@ def _roadmap_generated(graph_rag, goal: str, preferred_tags, compose_level: str)
 
 
 def _learning_coach(graph_rag, question: str, user_id: str, compose_level: str):
+    """
+    @param graph_rag GraphRAG 서비스 인스턴스.
+    @param question 사용자 질문.
+    @param user_id 사용자 ID.
+    @param compose_level quick/full 출력 단계.
+    @returns 학습 코치 응답 JSON.
+    """
     resource_recommender = ResourceRecommendationService()
     return LearningCoachService(graph_rag=graph_rag, resource_recommender=resource_recommender).answer(
         user_id,
@@ -450,10 +564,21 @@ def _learning_coach(graph_rag, question: str, user_id: str, compose_level: str):
 
 
 def _roadmap_recommendation(target_role: str, user_id: str):
+    """
+    @param target_role 목표 역할.
+    @param user_id 사용자 ID.
+    @returns 그래프 기반 로드맵 추천 JSON.
+    """
     return RoadmapRecommendationService(mock_data.ROADMAPS).recommend(target_role, user_id)
 
 
 def _serialize(serializer_class, payload, many: bool = False) -> Response:
+    """
+    @param serializer_class 사용할 DRF Serializer 클래스.
+    @param payload 응답 데이터.
+    @param many 리스트 여부.
+    @returns 직렬화된 DRF Response.
+    """
     serializer = serializer_class(payload, many=many)
     return Response(serializer.data)
 
@@ -500,6 +625,12 @@ class WebSearchAPIView(APIView):
         responses={200: WebSearchSerializer},
     )
     def get(self, request) -> Response:
+        """
+        웹 검색 요청을 처리하고 구조화된 검색 결과를 반환합니다.
+
+        @param {Request} request - DRF 요청 객체 (query/top_k/engine 파라미터 포함).
+        @returns {Response} 검색 결과를 담은 직렬화된 응답.
+        """
         from jagalchi_ai.ai_core.service.retrieval.web_search_service import (
             WebSearchService,
             SearchEngine,
@@ -568,6 +699,12 @@ class DocumentRoadmapAPIView(APIView):
         responses={200: DocumentRoadmapSerializer},
     )
     def get(self, request) -> Response:
+        """
+        문서 기반 로드맵 추천을 수행합니다.
+
+        @param {Request} request - DRF 요청 객체 (document/goal 쿼리 파라미터).
+        @returns {Response} 추천 결과를 담은 직렬화된 응답.
+        """
         document = request.GET.get("document", "")
         goal = request.GET.get("goal", "")
 
@@ -605,6 +742,12 @@ class DocumentRoadmapAPIView(APIView):
         responses={200: DocumentRoadmapSerializer},
     )
     def post(self, request) -> Response:
+        """
+        문서 기반 로드맵 추천을 POST Body로 처리합니다.
+
+        @param {Request} request - DRF 요청 객체 (document/goal JSON).
+        @returns {Response} 추천 결과를 담은 직렬화된 응답.
+        """
         document = request.data.get("document", "")
         goal = request.data.get("goal", "")
 
@@ -655,6 +798,12 @@ class HealthCheckAPIView(APIView):
         responses={200: HealthCheckSerializer},
     )
     def get(self, request) -> Response:
+        """
+        헬스체크 정보를 반환합니다.
+
+        @param {Request} request - DRF 요청 객체.
+        @returns {Response} 서비스 상태를 담은 직렬화된 응답.
+        """
         from jagalchi_ai.ai_core.client import GeminiClient, TavilySearchClient, ExaSearchClient
 
         # 각 서비스 상태 확인
@@ -683,7 +832,12 @@ class HealthCheckAPIView(APIView):
 # =============================================================================
 
 def _extract_keywords(document: str) -> list:
-    """문서에서 핵심 키워드를 추출합니다."""
+    """
+    문서에서 핵심 키워드를 간단 규칙으로 추출합니다.
+
+    @param {str} document - 분석할 문서 텍스트.
+    @returns {list} 발견된 키워드 목록.
+    """
     if not document:
         return []
 
@@ -702,7 +856,12 @@ def _extract_keywords(document: str) -> list:
 
 
 def _summarize_document(document: str) -> str:
-    """문서를 요약합니다."""
+    """
+    문서의 앞부분을 기반으로 간단 요약을 생성합니다.
+
+    @param {str} document - 요약 대상 문서.
+    @returns {str} 요약 문자열.
+    """
     if not document:
         return ""
 
@@ -712,4 +871,3 @@ def _summarize_document(document: str) -> str:
         summary += "..."
 
     return f"문서 분석 결과: {summary}"
-

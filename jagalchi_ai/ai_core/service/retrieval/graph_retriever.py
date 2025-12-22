@@ -10,10 +10,20 @@ class GraphRetriever:
     """그래프 인접 노드 기반 검색기."""
 
     def __init__(self, adjacency: Dict[str, List[str]], node_text: Dict[str, str]) -> None:
+        """
+        @param adjacency 그래프 인접 리스트.
+        @param node_text 노드 ID별 텍스트 맵.
+        @returns None
+        """
         self._adjacency = adjacency
         self._node_text = node_text
 
     def search(self, node_id: str, top_k: int = 5) -> List[RetrievalItem]:
+        """
+        @param node_id 기준 노드 ID.
+        @param top_k 상위 결과 수.
+        @returns 인접 노드 기반 검색 결과 리스트.
+        """
         related = self._adjacency.get(node_id, [])[:top_k]
         results = []
         for related_id in related:

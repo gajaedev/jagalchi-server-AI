@@ -16,12 +16,25 @@ class GraphRAGService:
     """그래프 기반 RAG 검색 서비스."""
 
     def __init__(self, roadmaps: Optional[Dict[str, Roadmap]] = None) -> None:
+        """
+        로드맵 기반 그래프와 벡터 인덱스를 초기화합니다.
+
+        @param {Optional[Dict[str, Roadmap]]} roadmaps - 로드맵 데이터.
+        @returns {None} 그래프/벡터 스토어를 구축합니다.
+        """
         self._roadmaps = roadmaps or ROADMAPS
         self._graph = GraphStore()
         self._vector_store = InMemoryVectorStore()
         self._build_graph()
 
     def retrieve(self, query: str, top_k: int = 5) -> List[RetrievalItem]:
+        """
+        그래프 기반 컨텍스트 후보를 검색합니다.
+
+        @param {str} query - 검색 질의.
+        @param {int} top_k - 반환할 상위 결과 수.
+        @returns {List[RetrievalItem]} 검색된 증거 목록.
+        """
         vector_retriever = VectorRetriever(self._vector_store, namespace="graph")
         vector_hits = vector_retriever.search(query, top_k=top_k)
 
@@ -44,6 +57,13 @@ class GraphRAGService:
         return combined[:top_k]
 
     def build_context(self, query: str, top_k: int = 5) -> Dict[str, object]:
+        """
+        그래프 스냅샷과 근거를 포함한 컨텍스트를 생성합니다.
+
+        @param {str} query - 검색 질의.
+        @param {int} top_k - 반환할 상위 결과 수.
+        @returns {Dict[str, object]} 근거/그래프 스냅샷 페이로드.
+        """
         evidence = self.retrieve(query, top_k=top_k)
         nodes = []
         for item in evidence:
@@ -65,6 +85,13 @@ class GraphRAGService:
         }
 
     def score_nodes(self, query: str, top_k: int = 5) -> List[GraphNode]:
+        """
+        노드 텍스트와 질의의 유사도를 계산해 상위 노드를 반환합니다.
+
+        @param {str} query - 검색 질의.
+        @param {int} top_k - 반환할 상위 노드 수.
+        @returns {List[GraphNode]} 상위 노드 목록.
+        """
         tokens = tokenize(query)
         scored = []
         for node in self._graph.nodes.values():
@@ -74,6 +101,11 @@ class GraphRAGService:
         return [node for _, node in scored[:top_k]]
 
     def _build_graph(self) -> None:
+        """
+        로드맵 데이터를 그래프/벡터 스토어에 적재합니다.
+
+        @returns {None} 내부 그래프 상태를 구성합니다.
+        """
         for roadmap in self._roadmaps.values():
             node_map = {node.node_id: node for node in roadmap.nodes}
             for node in roadmap.nodes:
@@ -97,4 +129,9 @@ class GraphRAGService:
                     self._graph.add_edge(f"{roadmap.roadmap_id}:{source}", f"{roadmap.roadmap_id}:{target}")
 
     def _node_text_map(self) -> Dict[str, str]:
+        """
+        노드 ID -> 텍스트 매핑을 반환합니다.
+
+        @returns {Dict[str, str]} 노드 텍스트 매핑.
+        """
         return {node_id: node.text for node_id, node in self._graph.nodes.items()}

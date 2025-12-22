@@ -232,6 +232,8 @@ class ExaSearchOptions:
 
         Returns:
             Dict[str, Any]: Exa API 호출에 사용할 파라미터.
+
+        @returns {Dict[str, Any]} Exa API 파라미터 딕셔너리.
         """
         params: Dict[str, Any] = {
             "num_results": self.num_results,
@@ -288,6 +290,11 @@ def create_retry_decorator(
 
     Returns:
         Callable: 재시도 데코레이터 또는 패스스루 데코레이터.
+
+    @param {int} max_attempts - 최대 재시도 횟수.
+    @param {float} min_wait - 최소 대기 시간(초).
+    @param {float} max_wait - 최대 대기 시간(초).
+    @returns {Callable} 재시도 데코레이터.
     """
     if TENACITY_AVAILABLE:
         return retry(
@@ -300,6 +307,12 @@ def create_retry_decorator(
     else:
         # tenacity가 없으면 단순 패스스루
         def passthrough(func: Callable) -> Callable:
+            """
+            데코레이터가 없는 환경에서 원본 함수를 그대로 반환합니다.
+
+            @param {Callable} func - 래핑 대상 함수.
+            @returns {Callable} 수정 없이 전달된 함수.
+            """
             return func
 
         return passthrough
@@ -384,6 +397,12 @@ class ExaSearchClient:
 
             >>> # 타임아웃 및 텍스트 설정
             >>> client = ExaSearchClient(timeout=60, include_text=True)
+
+        @param {Optional[str]} api_key - Exa API 키.
+        @param {int} timeout - 요청 타임아웃(초).
+        @param {int} max_retries - 최대 재시도 횟수.
+        @param {bool} include_text - 텍스트 포함 여부.
+        @returns {None} 클라이언트를 초기화합니다.
         """
         # API 키 설정 (파라미터 > 환경변수)
         self._api_key = api_key or os.getenv("EXA_API_KEY", "")
@@ -427,6 +446,8 @@ class ExaSearchClient:
 
         Returns:
             bool: API 키가 있고 클라이언트가 초기화되었으면 True.
+
+        @returns {bool} 사용 가능 여부.
         """
         return self._client is not None
 
@@ -443,6 +464,8 @@ class ExaSearchClient:
 
         Returns:
             bool: 사용 가능 여부.
+
+        @returns {bool} 사용 가능 여부.
         """
         return self.is_available
 
@@ -476,6 +499,11 @@ class ExaSearchClient:
             >>> results = client.search("Python 웹 프레임워크 비교")
             >>> for result in results[:5]:
             ...     print(f"[{result.score:.2f}] {result.title}")
+
+        @param {str} query - 검색 쿼리.
+        @param {int} max_results - 최대 결과 수.
+        @param {SearchType} search_type - 검색 유형.
+        @returns {List[ExaResult]} 검색 결과 리스트.
         """
         if not self.is_available:
             logger.warning("Exa 클라이언트가 사용 불가능한 상태")
@@ -536,6 +564,10 @@ class ExaSearchClient:
             ...     start_published_date="2024-01-01",
             ... )
             >>> results = client.search_with_options("transformer architecture", options)
+
+        @param {str} query - 검색 쿼리.
+        @param {ExaSearchOptions} options - 검색 옵션.
+        @returns {List[ExaResult]} 검색 결과 리스트.
         """
         if not self.is_available:
             return []
@@ -581,6 +613,11 @@ class ExaSearchClient:
             ...     "https://example.com/python-tutorial",
             ...     max_results=10,
             ... )
+
+        @param {str} url - 기준 URL.
+        @param {int} max_results - 최대 결과 수.
+        @param {bool} exclude_source - 원본 제외 여부.
+        @returns {List[ExaResult]} 유사 콘텐츠 리스트.
         """
         if not self.is_available:
             return []
@@ -639,6 +676,11 @@ class ExaSearchClient:
             >>> news = client.search_news("인공지능 발전", days=3)
             >>> for article in news:
             ...     print(f"{article.published_date}: {article.title}")
+
+        @param {str} query - 검색 쿼리.
+        @param {int} max_results - 최대 결과 수.
+        @param {int} days - 검색 기간(일).
+        @returns {List[ExaResult]} 뉴스 검색 결과 리스트.
         """
         if not self.is_available:
             return []
@@ -678,6 +720,10 @@ class ExaSearchClient:
 
         Example:
             >>> papers = client.search_research("neural network optimization")
+
+        @param {str} query - 검색 쿼리.
+        @param {int} max_results - 최대 결과 수.
+        @returns {List[ExaResult]} 연구 논문 결과 리스트.
         """
         if not self.is_available:
             return []
@@ -719,6 +765,11 @@ class ExaSearchClient:
 
         Returns:
             List[ExaResult]: 검색 결과 리스트.
+
+        @param {str} query - 검색 쿼리.
+        @param {SearchType} search_type - 검색 유형.
+        @param {Any} kwargs - 추가 API 파라미터.
+        @returns {List[ExaResult]} 검색 결과 리스트.
         """
         if self._client is None:
             return []
@@ -747,6 +798,9 @@ class ExaSearchClient:
 
         Returns:
             List[ExaResult]: 파싱된 검색 결과 리스트.
+
+        @param {Any} raw - Exa API 원본 응답.
+        @returns {List[ExaResult]} 파싱된 검색 결과 리스트.
         """
         results: List[ExaResult] = []
 
@@ -800,6 +854,9 @@ class ExaSearchClient:
 
         Returns:
             str: 추출된 콘텐츠 텍스트.
+
+        @param {Any} item - 검색 결과 항목 객체.
+        @returns {str} 추출된 콘텐츠 텍스트.
         """
         # 1. 요약 확인
         summary = getattr(item, "summary", None)
@@ -852,6 +909,11 @@ class ExaSearchClient:
             >>> context = client.get_search_context("Python 비동기 프로그래밍")
             >>> # LLM에 전달
             >>> prompt = f"다음 정보를 참고하여 답변하세요:\\n{context}\\n\\n질문: ..."
+
+        @param {str} query - 검색 쿼리.
+        @param {int} max_results - 최대 결과 수.
+        @param {int} max_tokens - 최대 토큰 수.
+        @returns {str} RAG 컨텍스트 문자열.
         """
         results = self.search(query, max_results=max_results)
 
@@ -879,6 +941,8 @@ class ExaSearchClient:
             >>> status = client.health_check()
             >>> print(status)
             {'available': True, 'api_key_set': True, ...}
+
+        @returns {Dict[str, Any]} 상태 정보 딕셔너리.
         """
         status = {
             "available": self.is_available,
@@ -904,7 +968,11 @@ class ExaSearchClient:
         return status
 
     def __repr__(self) -> str:
-        """디버깅용 문자열 표현."""
+        """
+        디버깅용 문자열 표현.
+
+        @returns {str} 디버깅 문자열.
+        """
         return (
             f"ExaSearchClient("
             f"available={self.is_available}, "
@@ -927,6 +995,8 @@ def get_default_client() -> ExaSearchClient:
     Example:
         >>> client = get_default_client()
         >>> results = client.search("query")
+
+    @returns {ExaSearchClient} 기본 설정 클라이언트.
     """
     return ExaSearchClient()
 
@@ -948,6 +1018,10 @@ def quick_search(query: str, max_results: int = 5) -> List[ExaResult]:
         >>> results = quick_search("Python 학습 자료")
         >>> for r in results:
         ...     print(r.title)
+
+    @param {str} query - 검색 쿼리.
+    @param {int} max_results - 최대 결과 수.
+    @returns {List[ExaResult]} 검색 결과 리스트.
     """
     client = ExaSearchClient()
     return client.search(query, max_results=max_results)

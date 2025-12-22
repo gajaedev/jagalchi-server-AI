@@ -5,6 +5,10 @@ from typing import Dict, List
 
 
 def analyze_code(code: str) -> Dict[str, object]:
+    """
+    @param code 코드 문자열.
+    @returns 간단한 품질 이슈/개선 제안/점수 결과.
+    """
     issues: List[str] = []
     suggestions: List[str] = []
 

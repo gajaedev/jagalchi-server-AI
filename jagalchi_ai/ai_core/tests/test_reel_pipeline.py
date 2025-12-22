@@ -6,6 +6,11 @@ from jagalchi_ai.ai_core.service.tech.reel_pipeline import ReelPipeline
 
 class ReelPipelineTests(unittest.TestCase):
     def test_reel_extract(self) -> None:
+        """
+        REEL 파이프라인이 메타데이터를 추출하는지 검증합니다.
+
+        @returns {None} 테스트만 수행합니다.
+        """
         sources = [
             {"title": "Doc", "content": "License: MIT v1.2.3 Language: Python", "fetched_at": "2025-01-01"}
         ]

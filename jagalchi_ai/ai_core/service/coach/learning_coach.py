@@ -141,6 +141,15 @@ class LearningCoachService:
                 Fogg 행동 모델 평가기. 동기/능력/트리거 분석.
             workflow:
                 상태 기반 워크플로우. 에이전트의 실행 계획 관리.
+
+        @param {Optional[GraphRAGService]} graph_rag - 지식 그래프 RAG 서비스.
+        @param {Optional[ResourceRecommendationService]} resource_recommender - 자료 추천 서비스.
+        @param {Optional[ProgressTrackingService]} progress_tracker - 진행 상황 추적 서비스.
+        @param {Optional[SemanticCache]} cache - 시맨틱 캐시.
+        @param {Optional[GeminiClient]} llm_client - LLM 클라이언트.
+        @param {Optional[BehaviorModel]} behavior_model - 행동 모델 분석기.
+        @param {Optional[SimpleWorkflow]} workflow - 워크플로우 관리자.
+        @returns {None} 기본 의존성을 초기화합니다.
         """
         # 의존성 주입 (Dependency Injection) 패턴 적용
         # None인 경우 기본 인스턴스 생성
@@ -206,6 +215,12 @@ class LearningCoachService:
             >>> response = coach.answer("user_1", "React 상태 관리 방법")
             >>> print(response["intent"])  # "concept"
             >>> print(response["answer"])  # "핵심 개념 요약: React, State, ..."
+
+        @param {str} user_id - 사용자 고유 식별자.
+        @param {str} question - 사용자 질문 텍스트.
+        @param {str} user_level - 사용자 학습 수준.
+        @param {str} compose_level - 답변 상세 수준.
+        @returns {Dict[str, Any]} 학습 코치 응답 딕셔너리.
         """
         # ---------------------------------------------------------------------
         # Step 1: 시맨틱 캐시 확인
@@ -328,6 +343,16 @@ class LearningCoachService:
 
         Returns:
             Dict[str, Any]: 표준화된 응답 딕셔너리
+
+        @param {str} user_id - 사용자 ID.
+        @param {str} question - 원본 질문.
+        @param {str} intent - 분류된 의도.
+        @param {List[str]} toolchain - 사용된 도구 목록.
+        @param {Dict[str, Any]} plan - 워크플로우 실행 계획.
+        @param {str} answer - 최종 답변.
+        @param {List[Dict[str, str]]} evidence - 검색 근거 목록.
+        @param {bool} cache_hit - 캐시 히트 여부.
+        @returns {Dict[str, Any]} 표준화된 응답 딕셔너리.
         """
         return {
             "user_id": user_id,
@@ -372,6 +397,9 @@ def _classify_intent(question: str) -> str:
         "error"
         >>> _classify_intent("React의 Virtual DOM이란?")
         "concept"
+
+    @param {str} question - 사용자 질문 텍스트.
+    @returns {str} 분류된 의도 문자열.
     """
     lowered = question.lower()
 
@@ -407,6 +435,12 @@ def _build_coach_prompt(
 
     Returns:
         str: LLM에 전달할 전체 프롬프트 문자열
+
+    @param {str} question - 사용자 질문 텍스트.
+    @param {str} answer - 도구 실행 결과 초안.
+    @param {List[Dict[str, str]]} evidence - 검색 근거 목록.
+    @param {str} level - 사용자 학습 수준.
+    @returns {str} 완성된 프롬프트 문자열.
     """
     return (
         "사용자의 질문에 대해 간결하고 실용적인 답변을 생성해줘. "

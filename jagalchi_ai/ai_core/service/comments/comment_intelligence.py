@@ -16,12 +16,26 @@ class CommentIntelligenceService:
     """코멘트 중복/이슈 요약 서비스."""
 
     def __init__(self, comments: Optional[List[Comment]] = None) -> None:
+        """
+        코멘트 인텔리전스 서비스를 초기화합니다.
+
+        @param {Optional[List[Comment]]} comments - 분석할 코멘트 목록.
+        @returns {None} 내부 인덱스를 구성합니다.
+        """
         self._comments = comments or COMMENTS
         self._vectorizer = TfidfVectorizer()
         self._matrix = None
         self._index_comments()
 
     def duplicate_suggest(self, roadmap_id: str, query: str, top_k: int = 3) -> List[Dict[str, object]]:
+        """
+        특정 로드맵에서 유사한 질문을 추천합니다.
+
+        @param {str} roadmap_id - 로드맵 식별자.
+        @param {str} query - 사용자 입력 질문.
+        @param {int} top_k - 반환할 최대 결과 수.
+        @returns {List[Dict[str, object]]} 유사 질문 요약 목록.
+        """
         roadmap_indices = [idx for idx, c in enumerate(self._comments) if c.roadmap_id == roadmap_id]
         if not roadmap_indices or self._matrix is None:
             return []
@@ -35,6 +49,13 @@ class CommentIntelligenceService:
         ]
 
     def comment_digest(self, roadmap_id: str, period_days: int = 14) -> Dict[str, object]:
+        """
+        최근 코멘트를 요약하여 하이라이트와 병목을 반환합니다.
+
+        @param {str} roadmap_id - 로드맵 식별자.
+        @param {int} period_days - 집계 기간(일).
+        @returns {Dict[str, object]} 하이라이트와 병목 점수 페이로드.
+        """
         cutoff = datetime.utcnow() - timedelta(days=period_days)
         comments = [c for c in self._comments if c.roadmap_id == roadmap_id and c.created_at and c.created_at >= cutoff]
         clusters = _cluster_comments(comments)
@@ -50,6 +71,11 @@ class CommentIntelligenceService:
         }
 
     def _index_comments(self) -> None:
+        """
+        TF-IDF 기반으로 코멘트 인덱스를 구성합니다.
+
+        @returns {None} 인덱싱만 수행합니다.
+        """
         if not self._comments:
             self._matrix = None
             return
@@ -58,6 +84,12 @@ class CommentIntelligenceService:
 
 
 def _cluster_comments(comments: List[Comment]) -> List[List[Comment]]:
+    """
+    코멘트를 의미 기반으로 군집화합니다.
+
+    @param {List[Comment]} comments - 코멘트 목록.
+    @returns {List[List[Comment]]} 코멘트 클러스터 목록.
+    """
     if len(comments) <= 1:
         return [comments] if comments else []
     corpus = [comment.body for comment in comments]
@@ -79,6 +111,12 @@ def _cluster_comments(comments: List[Comment]) -> List[List[Comment]]:
 
 
 def _bottleneck_scores(comments: List[Comment]) -> List[Dict[str, object]]:
+    """
+    코멘트 데이터를 기반으로 노드 병목 점수를 계산합니다.
+
+    @param {List[Comment]} comments - 코멘트 목록.
+    @returns {List[Dict[str, object]]} 병목 점수 목록.
+    """
     node_stats: Dict[str, Dict[str, float]] = defaultdict(lambda: {"count": 0, "negative": 0, "unresolved": 0})
     for comment in comments:
         if not comment.node_id:

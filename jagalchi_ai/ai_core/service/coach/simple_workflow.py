@@ -83,6 +83,9 @@ class SimpleWorkflow:
             checkpoint:
                 상태 저장소. None인 경우 InMemoryCheckpoint를 생성합니다.
                 테스트 시 Mock 객체를 주입할 수 있습니다.
+
+        @param {Optional[InMemoryCheckpoint]} checkpoint - 상태 저장소.
+        @returns {None} 체크포인트를 초기화합니다.
         """
         self._checkpoint = checkpoint or InMemoryCheckpoint()
 
@@ -115,6 +118,11 @@ class SimpleWorkflow:
             >>> workflow = SimpleWorkflow()
             >>> plan = workflow.run("sess_1", "error", ["doc_retriever"])
             >>> assert plan == ["route", "retrieve", "compose"]
+
+        @param {str} session_id - 세션 고유 식별자.
+        @param {str} intent - 분류된 사용자 의도.
+        @param {List[str]} tools - 사용된 도구 목록.
+        @returns {List[str]} 실행된 워크플로우 단계 목록.
         """
         plan = DEFAULT_WORKFLOW_PLAN.copy()
 
@@ -145,6 +153,11 @@ class SimpleWorkflow:
             session_id: 세션 ID
             step_name: 단계 이름 ("route", "retrieve", "compose")
             payload: 상태 데이터 딕셔너리
+
+        @param {str} session_id - 세션 ID.
+        @param {str} step_name - 단계 이름.
+        @param {Dict[str, Any]} payload - 상태 데이터.
+        @returns {None} 체크포인트에 상태를 기록합니다.
         """
         self._checkpoint.save(
             session_id,
@@ -164,5 +177,8 @@ class SimpleWorkflow:
 
         Returns:
             List[WorkflowState]: 저장된 상태 목록 (시간순)
+
+        @param {str} session_id - 조회할 세션 ID.
+        @returns {List[WorkflowState]} 저장된 상태 목록.
         """
         return self._checkpoint.get_all(session_id)

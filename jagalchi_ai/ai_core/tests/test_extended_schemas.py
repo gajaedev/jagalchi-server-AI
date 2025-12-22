@@ -13,11 +13,21 @@ from jagalchi_ai.ai_core.service.recommendation.resource_recommender import Reso
 
 class ExtendedSchemaTests(unittest.TestCase):
     def test_roadmap_generation_schema(self) -> None:
+        """
+        로드맵 생성 스키마 검증을 수행합니다.
+
+        @returns {None} 테스트만 수행합니다.
+        """
         service = RoadmapGeneratorService()
         payload = service.generate("React 학습", preferred_tags=["react"], compose_level="quick")
         validate_roadmap_generation_output(payload)
 
     def test_resource_recommendation_schema(self) -> None:
+        """
+        자료 추천 스키마 검증을 수행합니다.
+
+        @returns {None} 테스트만 수행합니다.
+        """
         os.environ["AI_DISABLE_EXTERNAL"] = "true"
         try:
             service = ResourceRecommendationService()
@@ -27,6 +37,11 @@ class ExtendedSchemaTests(unittest.TestCase):
         validate_resource_recommendation_output(payload)
 
     def test_learning_pattern_schema(self) -> None:
+        """
+        학습 패턴 스키마 검증을 수행합니다.
+
+        @returns {None} 테스트만 수행합니다.
+        """
         service = LearningPatternService()
         payload = service.analyze("user_1", days=14)
         validate_learning_pattern_output(payload)

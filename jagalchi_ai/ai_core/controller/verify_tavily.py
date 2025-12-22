@@ -49,19 +49,36 @@ except ImportError as e:
 
 
 def print_separator(title: str):
+    """
+    콘솔 출력 구분선을 표시합니다.
+
+    @param {str} title - 구분선에 표시할 제목.
+    @returns {None} 출력만 수행합니다.
+    """
     print(f"\n{'=' * 60}")
     print(f" {title}")
     print(f"{'=' * 60}")
 
 
 def print_result(result):
+    """
+    검색 결과 한 건을 보기 좋은 형식으로 출력합니다.
+
+    @param {object} result - Tavily 결과 객체.
+    @returns {None} 출력만 수행합니다.
+    """
     print(f"- [{result.score:.2f}] {result.title}")
     print(f"  URL: {result.url}")
     print(f"  Content: {result.content[:100]}...")
 
 
 def verify_sync_search(client: TavilySearchClient):
-    """동기 검색 기능 검증"""
+    """
+    동기 검색 기능을 검증합니다.
+
+    @param {TavilySearchClient} client - Tavily 검색 클라이언트.
+    @returns {None} 검증 로그를 출력합니다.
+    """
     print_separator("1. 동기 검색 테스트 (Synchronous)")
     
     query = "Python 3.12 새로운 기능"
@@ -82,7 +99,12 @@ def verify_sync_search(client: TavilySearchClient):
 
 
 async def verify_async_search(client: TavilySearchClient):
-    """비동기 검색 기능 검증"""
+    """
+    비동기 검색 기능을 검증합니다.
+
+    @param {TavilySearchClient} client - Tavily 검색 클라이언트.
+    @returns {None} 검증 로그를 출력합니다.
+    """
     print_separator("2. 비동기 검색 테스트 (Asynchronous)")
     
     query = "Django 비동기 뷰 튜토리얼"
@@ -108,7 +130,12 @@ async def verify_async_search(client: TavilySearchClient):
 
 
 def verify_news_search(client: TavilySearchClient):
-    """뉴스 검색 기능 검증"""
+    """
+    뉴스 검색 기능을 검증합니다.
+
+    @param {TavilySearchClient} client - Tavily 검색 클라이언트.
+    @returns {None} 검증 로그를 출력합니다.
+    """
     print_separator("3. 뉴스 검색 테스트")
     
     query = "인공지능 최신 뉴스"
@@ -127,6 +154,11 @@ def verify_news_search(client: TavilySearchClient):
 
 
 async def main():
+    """
+    Tavily 검색 기능을 동기/비동기로 검증합니다.
+
+    @returns {None} 표준 출력으로 검증 결과를 표시합니다.
+    """
     # 환경변수 로드
     load_dotenv()
     

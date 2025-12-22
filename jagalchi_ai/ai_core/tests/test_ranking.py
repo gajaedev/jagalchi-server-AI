@@ -5,6 +5,11 @@ from jagalchi_ai.ai_core.service.recommendation.related_roadmaps import RelatedR
 
 class RankingTests(unittest.TestCase):
     def test_ranking_stability(self) -> None:
+        """
+        로드맵 추천 랭킹의 일관성을 검증합니다.
+
+        @returns {None} 테스트만 수행합니다.
+        """
         service = RelatedRoadmapsService()
         result = service.generate_snapshot("rm_frontend")
         candidates = result["candidates"]

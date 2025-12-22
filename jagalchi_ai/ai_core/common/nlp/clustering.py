@@ -7,6 +7,11 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 
 
 def density_cluster(texts: List[str], threshold: float = 0.35) -> List[List[str]]:
+    """
+    @param texts 클러스터링 대상 문장 리스트.
+    @param threshold 유사도 임계값(높을수록 엄격).
+    @returns 클러스터별 텍스트 묶음 리스트.
+    """
     if not texts:
         return []
     vectorizer = TfidfVectorizer()

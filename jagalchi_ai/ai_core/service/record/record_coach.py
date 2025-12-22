@@ -32,6 +32,13 @@ class RecordCoachService:
         model_router: Optional[ModelRouter] = None,
         llm_client: Optional[GeminiClient] = None,
     ) -> None:
+        """
+        @param snapshot_store 스냅샷 캐시 저장소.
+        @param retriever 하이브리드 리트리버.
+        @param model_router 모델 라우터.
+        @param llm_client LLM 클라이언트.
+        @returns None
+        """
         self.snapshot_store = snapshot_store or SnapshotStore()
         self.model_router = model_router or ModelRouter()
         self.retriever = retriever or build_default_retriever()
@@ -45,6 +52,14 @@ class RecordCoachService:
         compose_level: str = "quick",
         prompt_version: str = "record_coach_v1",
     ) -> Dict[str, object]:
+        """
+        @param record 학습 기록 객체.
+        @param node 로드맵 노드 객체.
+        @param tags 로드맵 태그 목록.
+        @param compose_level quick/full 출력 단계.
+        @param prompt_version 프롬프트 버전.
+        @returns Record Coach 피드백 JSON.
+        """
         cache_key = stable_hash_json(
             {
                 "memo": record.memo,
@@ -71,6 +86,14 @@ class RecordCoachService:
         compose_level: str,
         prompt_version: str,
     ) -> Dict[str, object]:
+        """
+        @param record 학습 기록 객체.
+        @param node 로드맵 노드 객체.
+        @param tags 로드맵 태그 목록.
+        @param compose_level quick/full 출력 단계.
+        @param prompt_version 프롬프트 버전.
+        @returns 스냅샷 저장용 페이로드.
+        """
         scores = score_record(record)
         summary = extractive_summary(record.memo)
         query = " ".join([node.title, " ".join(tags), summary]).strip()
@@ -104,6 +127,9 @@ class RecordCoachService:
 
 
 def build_default_retriever() -> HybridRetriever:
+    """
+    @returns 기본 하이브리드 리트리버 인스턴스.
+    """
     documents: List[Document] = []
 
     for slug, sources in TECH_SOURCES.items():
@@ -165,6 +191,10 @@ def build_default_retriever() -> HybridRetriever:
 
 
 def _analyze_strengths(scores: Dict[str, int]) -> tuple[List[str], List[str]]:
+    """
+    @param scores 루브릭 점수 맵.
+    @returns (강점 리스트, 갭 리스트) 튜플.
+    """
     strengths = []
     gaps = []
     if scores["evidence_level"] >= 2:
@@ -191,6 +221,10 @@ def _analyze_strengths(scores: Dict[str, int]) -> tuple[List[str], List[str]]:
 
 
 def _followup_questions(scores: Dict[str, int]) -> List[str]:
+    """
+    @param scores 루브릭 점수 맵.
+    @returns 후속 질문 리스트.
+    """
     questions = []
     if scores["evidence_level"] < 2:
         questions.append("추가로 공유할 수 있는 데모/레포 링크가 있나요?")
@@ -202,6 +236,10 @@ def _followup_questions(scores: Dict[str, int]) -> List[str]:
 
 
 def _next_actions(scores: Dict[str, int]) -> List[Dict[str, str]]:
+    """
+    @param scores 루브릭 점수 맵.
+    @returns 다음 액션 리스트.
+    """
     actions = []
     if scores["evidence_level"] < 2:
         actions.append({"effort": "10m", "task": "데모 링크 또는 스크린샷 추가"})
@@ -219,6 +257,14 @@ def _compose_rewrite(
     router: ModelRouter,
     llm_client: GeminiClient,
 ) -> Dict[str, object]:
+    """
+    @param record 학습 기록 객체.
+    @param scores 루브릭 점수 맵.
+    @param compose_level quick/full 출력 단계.
+    @param router 모델 라우터.
+    @param llm_client LLM 클라이언트.
+    @returns 개선 문장/불릿 페이로드.
+    """
     if compose_level == "quick":
         # 빠른 응답 단계에서는 룰 기반으로만 반환한다.
         return {
@@ -259,6 +305,11 @@ def _compose_rewrite(
 
 
 def _build_record_prompt(memo: str, scores: Dict[str, int]) -> str:
+    """
+    @param memo 학습 기록 메모.
+    @param scores 루브릭 점수 맵.
+    @returns LLM 프롬프트 문자열.
+    """
     return (
         "다음 학습 기록을 포트폴리오 수준으로 개선할 문장을 JSON으로 반환해줘. "
         "반드시 JSON만 반환하고, 키는 portfolio_bullets(문장 배열)와 improved_memo(한 문장)만 사용해. "
@@ -268,6 +319,10 @@ def _build_record_prompt(memo: str, scores: Dict[str, int]) -> str:
 
 
 def _valid_rewrite_payload(payload: Dict[str, object]) -> bool:
+    """
+    @param payload LLM 응답 페이로드.
+    @returns 스키마 유효 여부.
+    """
     if not isinstance(payload.get("portfolio_bullets"), list):
         return False
     if not isinstance(payload.get("improved_memo"), str):
@@ -276,6 +331,10 @@ def _valid_rewrite_payload(payload: Dict[str, object]) -> bool:
 
 
 def _to_evidence_payload(items: List[RetrievalItem]) -> List[Dict[str, str]]:
+    """
+    @param items 검색 근거 리스트.
+    @returns 스키마용 근거 리스트.
+    """
     payload = []
     for item in items:
         payload.append({
@@ -287,6 +346,10 @@ def _to_evidence_payload(items: List[RetrievalItem]) -> List[Dict[str, str]]:
 
 
 def _maybe_code_feedback(memo: str) -> Dict[str, object]:
+    """
+    @param memo 학습 기록 메모.
+    @returns 코드 피드백 결과(없으면 빈 dict).
+    """
     if "```" not in memo:
         return {}
     code = memo.split("```")

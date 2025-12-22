@@ -7,6 +7,11 @@ from jagalchi_ai.ai_core.service.record.record_coach import RecordCoachService
 
 class SchemaValidationTests(unittest.TestCase):
     def test_record_coach_schema(self) -> None:
+        """
+        학습 기록 코치 스키마를 검증합니다.
+
+        @returns {None} 테스트만 수행합니다.
+        """
         service = RecordCoachService()
         record = LEARNING_RECORDS[0]
         node = ROADMAPS[record.roadmap_id].nodes[-1]

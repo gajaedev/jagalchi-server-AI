@@ -191,7 +191,11 @@ class GenerationConfig:
     """생성을 중단할 문자열 목록."""
 
     def to_dict(self) -> Dict[str, Any]:
-        """설정을 딕셔너리로 변환합니다."""
+        """
+        설정을 딕셔너리로 변환합니다.
+
+        @returns {Dict[str, Any]} API 요청용 설정 딕셔너리.
+        """
         config = {
             "temperature": self.temperature,
             "top_p": self.top_p,
@@ -226,6 +230,11 @@ def create_retry_decorator(
 
     Returns:
         Callable: 재시도 데코레이터 또는 패스스루 데코레이터.
+
+    @param {int} max_attempts - 최대 재시도 횟수.
+    @param {float} min_wait - 최소 대기 시간(초).
+    @param {float} max_wait - 최대 대기 시간(초).
+    @returns {Callable} 재시도 데코레이터.
     """
     if TENACITY_AVAILABLE:
         return retry(
@@ -238,6 +247,12 @@ def create_retry_decorator(
     else:
         # tenacity가 없으면 단순 패스스루
         def passthrough(func: Callable) -> Callable:
+            """
+            재시도 데코레이터가 없을 때 원본 함수를 그대로 반환합니다.
+
+            @param {Callable} func - 래핑 대상 함수.
+            @returns {Callable} 수정 없이 전달된 함수.
+            """
             return func
 
         return passthrough
@@ -331,6 +346,13 @@ class GeminiClient:
             ...     timeout=60,
             ...     safety_level=SafetyLevel.BLOCK_ONLY_HIGH,
             ... )
+
+        @param {Optional[str]} api_key - Gemini API 키.
+        @param {Union[str, GeminiModel]} model - 사용할 모델.
+        @param {int} timeout - 요청 타임아웃(초).
+        @param {int} max_retries - 최대 재시도 횟수.
+        @param {SafetyLevel} safety_level - 안전 필터 수준.
+        @returns {None} 클라이언트를 초기화합니다.
         """
         # API 키 설정 (파라미터 > 환경변수)
         self._api_key = api_key or os.getenv("GEMINI_API_KEY", "")
@@ -389,6 +411,8 @@ class GeminiClient:
 
         Returns:
             str: 모델 이름 (예: 'gemini-2.5-flash').
+
+        @returns {str} 모델 이름.
         """
         return self._model
 
@@ -399,6 +423,8 @@ class GeminiClient:
 
         Returns:
             bool: API 키가 있고 클라이언트가 초기화되었으며 비활성화되지 않았으면 True.
+
+        @returns {bool} 사용 가능 여부.
         """
         return self._client is not None and not self._disabled
 
@@ -415,6 +441,8 @@ class GeminiClient:
 
         Returns:
             bool: 사용 가능 여부.
+
+        @returns {bool} 사용 가능 여부.
         """
         return self.is_available
 
@@ -457,6 +485,11 @@ class GeminiClient:
             ...     config=config,
             ...     system_instruction="당신은 전문 교육자입니다.",
             ... )
+
+        @param {str} contents - 생성 요청 프롬프트.
+        @param {Optional[GenerationConfig]} config - 생성 설정.
+        @param {Optional[str]} system_instruction - 시스템 지시사항.
+        @returns {str} 생성된 텍스트.
         """
         if not self.is_available:
             logger.warning("Gemini 클라이언트가 사용 불가능한 상태")
@@ -508,6 +541,11 @@ class GeminiClient:
 
         Returns:
             str: 생성된 텍스트.
+
+        @param {str} contents - 생성 요청 프롬프트.
+        @param {Optional[GenerationConfig]} config - 생성 설정.
+        @param {Optional[str]} system_instruction - 시스템 지시사항.
+        @returns {str} 생성된 텍스트.
         """
         if self._client is None:
             return ""
@@ -563,6 +601,11 @@ class GeminiClient:
             >>> response = client.generate_json(prompt)
             >>> if response.is_valid:
             ...     print(response.get("name"))
+
+        @param {str} contents - JSON 응답을 요청하는 프롬프트.
+        @param {Optional[GenerationConfig]} config - 생성 설정.
+        @param {Optional[str]} system_instruction - 시스템 지시사항.
+        @returns {GeminiResponse} JSON 응답 객체.
         """
         # 텍스트 생성
         raw_text = self.generate_text(
@@ -625,6 +668,12 @@ class GeminiClient:
             ...     "파이썬 학습 로드맵을 만들어주세요",
             ...     schema=schema,
             ... )
+
+        @param {str} contents - 생성 요청 프롬프트.
+        @param {Dict[str, Any]} schema - JSON 스키마.
+        @param {Optional[GenerationConfig]} config - 생성 설정.
+        @param {Optional[str]} system_instruction - 시스템 지시사항.
+        @returns {GeminiResponse} 구조화된 응답 객체.
         """
         # 스키마를 프롬프트에 포함
         schema_prompt = f"""
@@ -671,6 +720,11 @@ class GeminiClient:
         Example:
             >>> for chunk in client.generate_stream("긴 이야기를 들려주세요"):
             ...     print(chunk, end="", flush=True)
+
+        @param {str} contents - 생성 요청 프롬프트.
+        @param {Optional[GenerationConfig]} config - 생성 설정.
+        @param {Optional[str]} system_instruction - 시스템 지시사항.
+        @returns {Generator[str, None, None]} 텍스트 스트림.
         """
         if not self.is_available:
             logger.warning("Gemini 클라이언트가 사용 불가능한 상태 (스트리밍)")
@@ -733,6 +787,11 @@ class GeminiClient:
             ...     {"role": "user", "content": "파이썬에 대해 알려주세요."},
             ... ]
             >>> response = client.chat(messages)
+
+        @param {List[Dict[str, str]]} messages - 대화 히스토리.
+        @param {Optional[GenerationConfig]} config - 생성 설정.
+        @param {Optional[str]} system_instruction - 시스템 지시사항.
+        @returns {str} 생성된 응답 텍스트.
         """
         if not self.is_available:
             return ""
@@ -770,6 +829,9 @@ class GeminiClient:
 
         Returns:
             int: 추정 토큰 수.
+
+        @param {str} text - 토큰 수를 계산할 텍스트.
+        @returns {int} 추정 토큰 수.
         """
         # 간단한 추정: 영어는 4자당 1토큰, 한글은 2자당 1토큰 정도
         # 실제로는 BPE 토크나이저에 따라 다름
@@ -796,6 +858,8 @@ class GeminiClient:
             >>> status = client.health_check()
             >>> print(status)
             {'available': True, 'model': 'gemini-2.5-flash', ...}
+
+        @returns {Dict[str, Any]} 상태 정보 딕셔너리.
         """
         return {
             "available": self.is_available,
@@ -810,7 +874,11 @@ class GeminiClient:
         }
 
     def __repr__(self) -> str:
-        """디버깅용 문자열 표현."""
+        """
+        디버깅용 문자열 표현.
+
+        @returns {str} 디버깅 문자열.
+        """
         return (
             f"GeminiClient("
             f"model={self._model!r}, "
@@ -838,6 +906,9 @@ def _safe_json_parse(text: str) -> Optional[Dict[str, Any]]:
     Returns:
         Optional[Dict[str, Any]]: 파싱된 JSON 객체 또는 None.
             JSON 배열인 경우 {"items": [...]} 형태로 래핑됩니다.
+
+    @param {str} text - JSON이 포함된 텍스트.
+    @returns {Optional[Dict[str, Any]]} 파싱된 JSON 객체 또는 None.
     """
     if not text or not text.strip():
         return None
@@ -909,6 +980,8 @@ def get_default_client() -> GeminiClient:
     Example:
         >>> client = get_default_client()
         >>> response = client.generate_text("Hello!")
+
+    @returns {GeminiClient} 기본 설정 클라이언트.
     """
     return GeminiClient()
 
@@ -928,6 +1001,9 @@ def quick_generate(prompt: str) -> str:
     Example:
         >>> response = quick_generate("파이썬이란?")
         >>> print(response)
+
+    @param {str} prompt - 생성 요청 프롬프트.
+    @returns {str} 생성된 텍스트.
     """
     client = GeminiClient()
     return client.generate_text(prompt)

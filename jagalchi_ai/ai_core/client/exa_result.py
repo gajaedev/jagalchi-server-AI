@@ -123,6 +123,8 @@ class ExaResult:
 
         Returns:
             bool: 유효한 결과면 True.
+
+        @returns {bool} 유효한 결과 여부.
         """
         return bool(self.url and self.title)
 
@@ -135,6 +137,8 @@ class ExaResult:
 
         Returns:
             bool: 관련성이 있으면 True.
+
+        @returns {bool} 관련성 여부.
         """
         return self.score >= self.RELEVANCE_THRESHOLD_LOW
 
@@ -147,6 +151,8 @@ class ExaResult:
 
         Returns:
             bool: 높은 관련성이면 True.
+
+        @returns {bool} 높은 관련성 여부.
         """
         return self.score >= self.RELEVANCE_THRESHOLD_HIGH
 
@@ -157,6 +163,8 @@ class ExaResult:
 
         Returns:
             str: 'high', 'medium', 'low', 또는 'irrelevant'.
+
+        @returns {str} 관련성 레벨 문자열.
         """
         if self.score >= self.RELEVANCE_THRESHOLD_HIGH:
             return "high"
@@ -174,6 +182,8 @@ class ExaResult:
 
         Returns:
             str: 도메인 이름 (예: 'example.com').
+
+        @returns {str} 도메인 문자열.
         """
         try:
             parsed = urlparse(self.url)
@@ -188,6 +198,8 @@ class ExaResult:
 
         Returns:
             bool: 콘텐츠가 비어있지 않으면 True.
+
+        @returns {bool} 콘텐츠 존재 여부.
         """
         return bool(self.content and self.content.strip())
 
@@ -198,6 +210,8 @@ class ExaResult:
 
         Returns:
             int: 콘텐츠 길이.
+
+        @returns {int} 콘텐츠 길이.
         """
         return len(self.content) if self.content else 0
 
@@ -208,6 +222,8 @@ class ExaResult:
 
         Returns:
             str: 콘텐츠 미리보기.
+
+        @returns {str} 콘텐츠 미리보기 문자열.
         """
         if not self.content:
             return ""
@@ -222,6 +238,8 @@ class ExaResult:
 
         Returns:
             bool: 발행일이 있으면 True.
+
+        @returns {bool} 발행일 존재 여부.
         """
         return bool(self.published_date)
 
@@ -232,6 +250,8 @@ class ExaResult:
 
         Returns:
             Optional[datetime]: 파싱된 datetime 또는 None.
+
+        @returns {Optional[datetime]} 파싱된 datetime 또는 None.
         """
         if not self.published_date:
             return None
@@ -253,6 +273,8 @@ class ExaResult:
 
         Returns:
             Dict[str, Any]: 검색 결과 딕셔너리.
+
+        @returns {Dict[str, Any]} 검색 결과 딕셔너리.
         """
         return {
             "title": self.title,
@@ -287,6 +309,9 @@ class ExaResult:
             >>> # URL: https://...
             >>> # 발행일: 2024-01-15
             >>> # 내용: ...
+
+        @param {bool} include_metadata - 메타데이터 포함 여부.
+        @returns {str} RAG용 컨텍스트 문자열.
         """
         lines = [f"[{self.title}]"]
 
@@ -314,6 +339,8 @@ class ExaResult:
 
         Returns:
             str: Markdown 형식의 검색 결과.
+
+        @returns {str} Markdown 문자열.
         """
         lines = [f"### [{self.title}]({self.url})"]
 
@@ -339,6 +366,8 @@ class ExaResult:
 
         Returns:
             str: 인용 형식 문자열.
+
+        @returns {str} 인용 문자열.
         """
         parts = [self.title]
         if self.author:
@@ -353,21 +382,39 @@ class ExaResult:
     # -------------------------------------------------------------------------
 
     def __lt__(self, other: ExaResult) -> bool:
-        """점수 기반 비교 (내림차순 정렬용)."""
+        """
+        점수 기반 비교 (내림차순 정렬용).
+
+        @param {ExaResult} other - 비교 대상 결과.
+        @returns {bool} 비교 결과.
+        """
         return self.score > other.score  # 높은 점수가 먼저 오도록
 
     def __eq__(self, other: object) -> bool:
-        """URL 기반 동등성 비교."""
+        """
+        URL 기반 동등성 비교.
+
+        @param {object} other - 비교 대상 객체.
+        @returns {bool} 동일 URL 여부.
+        """
         if not isinstance(other, ExaResult):
             return NotImplemented
         return self.url == other.url
 
     def __hash__(self) -> int:
-        """URL 기반 해시."""
+        """
+        URL 기반 해시.
+
+        @returns {int} 해시 값.
+        """
         return hash(self.url)
 
     def __repr__(self) -> str:
-        """디버깅용 문자열 표현."""
+        """
+        디버깅용 문자열 표현.
+
+        @returns {str} 디버깅 문자열.
+        """
         return (
             f"ExaResult("
             f"title='{self.title[:30]}...', "
@@ -393,6 +440,10 @@ def filter_results_by_score(
 
     Returns:
         List[ExaResult]: 필터링된 검색 결과 리스트.
+
+    @param {List[ExaResult]} results - 검색 결과 리스트.
+    @param {float} min_score - 최소 관련성 점수.
+    @returns {List[ExaResult]} 필터링된 결과 리스트.
     """
     return [r for r in results if r.score >= min_score]
 
@@ -412,6 +463,11 @@ def filter_results_by_domain(
 
     Returns:
         List[ExaResult]: 필터링된 검색 결과 리스트.
+
+    @param {List[ExaResult]} results - 검색 결과 리스트.
+    @param {Optional[List[str]]} allowed_domains - 허용 도메인 목록.
+    @param {Optional[List[str]]} blocked_domains - 차단 도메인 목록.
+    @returns {List[ExaResult]} 필터링된 결과 리스트.
     """
     filtered = results
 
@@ -441,6 +497,9 @@ def deduplicate_results(results: List[ExaResult]) -> List[ExaResult]:
 
     Returns:
         List[ExaResult]: 중복이 제거된 검색 결과 리스트.
+
+    @param {List[ExaResult]} results - 검색 결과 리스트.
+    @returns {List[ExaResult]} 중복 제거된 결과 리스트.
     """
     seen: Dict[str, ExaResult] = {}
 
@@ -467,6 +526,11 @@ def sort_results(
 
     Returns:
         List[ExaResult]: 정렬된 검색 결과 리스트.
+
+    @param {List[ExaResult]} results - 검색 결과 리스트.
+    @param {str} by - 정렬 기준.
+    @param {bool} descending - 내림차순 여부.
+    @returns {List[ExaResult]} 정렬된 결과 리스트.
     """
     if by == "score":
         key_func = lambda r: r.score
@@ -495,6 +559,11 @@ def results_to_context(
 
     Returns:
         str: RAG용 통합 컨텍스트.
+
+    @param {List[ExaResult]} results - 검색 결과 리스트.
+    @param {int} max_results - 최대 결과 수.
+    @param {int} max_tokens - 최대 토큰 수 추정.
+    @returns {str} RAG 컨텍스트 문자열.
     """
     contexts = []
     total_chars = 0
