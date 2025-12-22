@@ -18,6 +18,11 @@ pip install -r requirements.txt
 python manage.py test
 ```
 
+## Docker 실행
+```bash
+docker compose up --build
+```
+
 ## Gemini 연결 확인(선택)
 ```bash
 export GEMINI_API_KEY=your-key

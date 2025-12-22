@@ -17,6 +17,11 @@
 - `retrieval`: BM25 + Vector + Graph 하이브리드
 - `ranking`: 연관 로드맵 랭킹 가중치
 - `model_routing`: 작은 모델 우선 라우팅
+- `graph_rag`: 그래프 기반 근거 수집
+- `roadmap_generator`: 그래프 RAG 기반 로드맵 생성
+- `resource_recommender`: 자료 추천 검색
+- `learning_analytics`: 학습 패턴 분석
+- `gemini_client`: Gemini LLM 호출(선택)
 
 ---
 
@@ -158,5 +163,77 @@
   "highlights": ["..."],
   "bottlenecks": [{"node_id": "...", "score": 0.81, "top_topics": ["..."]}],
   "generated_by": {"model_version": "digest_v1"}
+}
+```
+
+---
+
+## 6) GraphRAG + 로드맵 생성
+### GraphRAG 파이프라인
+- Vector 검색으로 후보 노드 수집
+- 그래프 인접 노드 확장으로 근거 강화
+- 증거 스냅샷에 노드/엣지 포함
+
+### 로드맵 생성 파이프라인
+1. Retrieval: GraphRAG로 후보 노드 수집
+2. Judge: 토큰/태그 유사도 기반 노드 정렬
+3. Compose: LLM(선택) 또는 규칙 기반 구성
+
+### 스키마
+```json
+{
+  "roadmap_id": "generated",
+  "title": "...",
+  "description": "...",
+  "nodes": [{"node_id": "...", "title": "...", "tags": ["..."]}],
+  "edges": [{"source": "...", "target": "..."}],
+  "tags": ["..."],
+  "model_version": "...",
+  "prompt_version": "...",
+  "created_at": "...",
+  "retrieval_evidence": [{"source": "graph", "id": "...", "snippet": "..."}]
+}
+```
+
+---
+
+## 7) 자료 추천
+### 파이프라인
+- BM25 + Vector 하이브리드 검색
+- 근거 스냅샷으로 추천 이유 확인 가능
+
+### 스키마
+```json
+{
+  "query": "...",
+  "generated_at": "...",
+  "items": [
+    {"title": "...", "url": "...", "source": "resource", "score": 0.82}
+  ],
+  "model_version": "retriever_v1",
+  "retrieval_evidence": [{"source": "resource", "id": "...", "snippet": "..."}]
+}
+```
+
+---
+
+## 8) 학습 패턴 분석 및 추천
+### 파이프라인
+- 이벤트 로그 집계 → 패턴 계산 → 규칙 기반 추천
+- 캐시/스냅샷으로 반복 계산 절감
+
+### 스키마
+```json
+{
+  "user_id": "...",
+  "period": "last_30d",
+  "patterns": {
+    "active_days": 10,
+    "avg_session_gap_days": 2.3,
+    "completion_velocity": 0.4
+  },
+  "recommendations": ["..."],
+  "model_version": "pattern_v1",
+  "generated_at": "..."
 }
 ```

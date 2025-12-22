@@ -1,0 +1,10 @@
+.git/
+__pycache__/
+*.pyc
+.venv/
+venv/
+ENV/
+.pytest_cache/
+.DS_Store
+.env
+firebase-debug.log
