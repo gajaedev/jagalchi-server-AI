@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from jagalchi_ai.ai_core.tech.doc_watcher import DocWatcher
 from jagalchi_ai.ai_core.tech.reel_pipeline import ReelPipeline
 from jagalchi_ai.ai_core.core.snapshot import SnapshotStore
+from jagalchi_ai.ai_core.retrieval.web_search import WebSearchService
 from jagalchi_ai.ai_core.nlp.summarization import map_reduce_summary
 from jagalchi_ai.ai_core.nlp.text_utils import cheap_embed, extractive_summary
 from jagalchi_ai.ai_core.core.mock_data import COMMON_PITFALLS, TECH_SOURCES
@@ -23,6 +24,7 @@ _ALTERNATIVE_MAP = {
         {"slug": "fastapi", "why": "가볍고 빠른 API 서버가 필요할 때"},
     ],
 }
+_DEFAULT_SOURCE_SCORE = 0.45
 
 
 @dataclass
@@ -37,10 +39,11 @@ class TechCardService:
         self.snapshot_store = snapshot_store or SnapshotStore()
         self._reel = ReelPipeline()
         self._doc_watcher = DocWatcher()
+        self._web_search = WebSearchService()
 
     def get_or_create(self, tech_slug: str, prompt_version: str = "tech_card_v1") -> Dict[str, object]:
-        sources = TECH_SOURCES.get(tech_slug, [])
-        source_hash = stable_hash_json({"slug": tech_slug, "sources": sources})
+        sources = self._resolve_sources(tech_slug)
+        source_hash = self._source_hash(tech_slug, sources)
         snapshot = self.snapshot_store.get_or_create(
             source_hash,
             version=prompt_version,
@@ -50,13 +53,13 @@ class TechCardService:
         return snapshot.payload
 
     def _compose_card(self, tech_slug: str, sources: List[Dict[str, str]], prompt_version: str) -> Dict[str, object]:
-        merged = " ".join(source["content"] for source in sources)
         chunks = self._chunk_sources(tech_slug, sources)
         _ = self._index_chunks(chunks)
         summary = map_reduce_summary([source["content"] for source in sources])
         pitfalls = COMMON_PITFALLS.get(tech_slug, [])
         reel = self._reel.extract(sources)
         change_summary = self._detect_changes(sources)
+        reliability_metrics = self._calc_reliability(sources)
 
         latest_fetch = max((source["fetched_at"] for source in sources), default="2025-01-01")
         payload = {
@@ -88,7 +91,7 @@ class TechCardService:
                 "last_updated": latest_fetch,
             },
             "relationships": {"based_on": [], "alternatives": _ALTERNATIVE_MAP.get(tech_slug, [])},
-            "reliability_metrics": {"community_score": 80, "doc_freshness": 90},
+            "reliability_metrics": reliability_metrics,
             "latest_changes": change_summary,
             "reel_evidence": reel.evidence,
             "sources": [
@@ -101,6 +104,56 @@ class TechCardService:
             },
         }
         return payload
+
+    def _resolve_sources(self, tech_slug: str) -> List[Dict[str, str]]:
+        local_sources = [
+            {
+                **source,
+                "source": "mock",
+                "score": source.get("score", _DEFAULT_SOURCE_SCORE),
+            }
+            for source in TECH_SOURCES.get(tech_slug, [])
+        ]
+        query = f"{tech_slug} official documentation"
+        web_sources = self._web_search.search(query, top_k=3)
+        merged = self._dedupe_sources(web_sources + local_sources)
+        return merged
+
+    def _source_hash(self, tech_slug: str, sources: List[Dict[str, str]]) -> str:
+        normalized = []
+        for source in sources:
+            normalized.append(
+                {
+                    "title": source.get("title", ""),
+                    "url": source.get("url", ""),
+                    "content": extractive_summary(source.get("content", ""), max_sentences=2),
+                }
+            )
+        normalized.sort(key=lambda item: item["url"] or item["title"])
+        return stable_hash_json({"slug": tech_slug, "sources": normalized})
+
+    def _calc_reliability(self, sources: List[Dict[str, str]]) -> Dict[str, object]:
+        if not sources:
+            return {"community_score": 40, "doc_freshness": 0, "source_count": 0}
+        scores = [float(source.get("score") or _DEFAULT_SOURCE_SCORE) for source in sources]
+        avg_score = sum(scores) / max(len(scores), 1)
+        freshness_scores = []
+        today = datetime.utcnow().date()
+        for source in sources:
+            fetched_at = source.get("fetched_at") or ""
+            try:
+                fetched_date = datetime.fromisoformat(fetched_at).date()
+            except ValueError:
+                continue
+            days = (today - fetched_date).days
+            freshness_scores.append(max(0, 100 - min(days, 100)))
+        doc_freshness = round(sum(freshness_scores) / len(freshness_scores)) if freshness_scores else 50
+        community_score = round(min(100, 40 + avg_score * 50 + len(sources) * 3))
+        return {
+            "community_score": community_score,
+            "doc_freshness": doc_freshness,
+            "source_count": len(sources),
+        }
 
     def _detect_changes(self, sources: List[Dict[str, str]]) -> Dict[str, object]:
         if len(sources) < 2:
@@ -134,3 +187,14 @@ class TechCardService:
         ]
         store.batch_upsert(items)
         return store
+
+    def _dedupe_sources(self, sources: List[Dict[str, str]]) -> List[Dict[str, str]]:
+        seen = set()
+        deduped = []
+        for source in sources:
+            url = source.get("url", "")
+            if url and url in seen:
+                continue
+            seen.add(url)
+            deduped.append(source)
+        return deduped
