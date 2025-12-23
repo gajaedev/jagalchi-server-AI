@@ -1,6 +1,8 @@
 from django.urls import path
 
-from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+from drf_spectacular.views import SpectacularAPIView
+
+from jagalchi_ai.ai_core.controller.docs_views import RedocUIView, SwaggerUIView
 
 from jagalchi_ai.ai_core.controller.ai_views import (
     CommentDigestAPIView,
@@ -24,8 +26,8 @@ from jagalchi_ai.ai_core.controller.ai_views import (
 urlpatterns = [
     # OpenAPI 스키마 및 문서
     path("ai/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("ai/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
-    path("ai/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+    path("ai/docs/", SwaggerUIView.as_view(), name="swagger-ui"),
+    path("ai/redoc/", RedocUIView.as_view(), name="redoc"),
 
     # 헬스체크 API
     path("ai/health/", HealthCheckAPIView.as_view(), name="health-check"),
