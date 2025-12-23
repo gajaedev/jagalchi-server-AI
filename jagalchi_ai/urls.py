@@ -21,55 +21,41 @@ from jagalchi_ai.ai_core.controller.ai_views import (
     WebSearchAPIView,
 )
 
-API_PREFIXES = ("ai", "api")
-
-urlpatterns = []
-for prefix in API_PREFIXES:
+urlpatterns = [
     # OpenAPI 스키마 및 문서
-    urlpatterns.extend(
-        [
-            path(f"{prefix}/schema/", SpectacularAPIView.as_view(), name=f"schema-{prefix}"),
-            path(
-                f"{prefix}/docs/",
-                SpectacularSwaggerView.as_view(url_name=f"schema-{prefix}"),
-                name=f"swagger-ui-{prefix}",
-            ),
-            path(
-                f"{prefix}/redoc/",
-                SpectacularRedocView.as_view(url_name=f"schema-{prefix}"),
-                name=f"redoc-{prefix}",
-            ),
-        ]
-    )
+    path("ai/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("ai/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path("ai/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
 
     # 헬스체크 API
-    urlpatterns.append(path(f"{prefix}/health/", HealthCheckAPIView.as_view(), name=f"health-check-{prefix}"))
+    path("ai/health/", HealthCheckAPIView.as_view(), name="health-check"),
 
     # AI 데모 API
-    urlpatterns.append(path(f"{prefix}/ai/demo", DemoAIAPIView.as_view()))
+    path("ai/demo", DemoAIAPIView.as_view()),
 
     # 학습 코치 관련 API
-    urlpatterns.append(path(f"{prefix}/record-coach", RecordCoachAPIView.as_view()))
-    urlpatterns.append(path(f"{prefix}/learning-coach", LearningCoachAPIView.as_view()))
-    urlpatterns.append(path(f"{prefix}/learning-pattern", LearningPatternAPIView.as_view()))
+    path("ai/record-coach", RecordCoachAPIView.as_view()),
+    path("ai/learning-coach", LearningCoachAPIView.as_view()),
+    path("ai/learning-pattern", LearningPatternAPIView.as_view()),
 
     # 로드맵 관련 API
-    urlpatterns.append(path(f"{prefix}/related-roadmaps", RelatedRoadmapsAPIView.as_view()))
-    urlpatterns.append(path(f"{prefix}/roadmap-generated", RoadmapGeneratedAPIView.as_view()))
-    urlpatterns.append(path(f"{prefix}/roadmap-recommendation", RoadmapRecommendationAPIView.as_view()))
-    urlpatterns.append(path(f"{prefix}/document-roadmap", DocumentRoadmapAPIView.as_view()))
+    path("ai/related-roadmaps", RelatedRoadmapsAPIView.as_view()),
+    path("ai/roadmap-generated", RoadmapGeneratedAPIView.as_view()),
+    path("ai/roadmap-recommendation", RoadmapRecommendationAPIView.as_view()),
+    path("ai/document-roadmap", DocumentRoadmapAPIView.as_view()),
 
     # 기술 카드 API
-    urlpatterns.append(path(f"{prefix}/tech-cards", TechCardAPIView.as_view()))
-    urlpatterns.append(path(f"{prefix}/tech-fingerprint", TechFingerprintAPIView.as_view()))
+    path("ai/tech-cards", TechCardAPIView.as_view()),
+    path("ai/tech-fingerprint", TechFingerprintAPIView.as_view()),
 
     # 코멘트 관련 API
-    urlpatterns.append(path(f"{prefix}/comment-digest", CommentDigestAPIView.as_view()))
-    urlpatterns.append(path(f"{prefix}/comment-duplicates", CommentDuplicateAPIView.as_view()))
+    path("ai/comment-digest", CommentDigestAPIView.as_view()),
+    path("ai/comment-duplicates", CommentDuplicateAPIView.as_view()),
 
     # 검색 및 추천 API
-    urlpatterns.append(path(f"{prefix}/resource-recommendation", ResourceRecommendationAPIView.as_view()))
-    urlpatterns.append(path(f"{prefix}/web-search", WebSearchAPIView.as_view()))
+    path("ai/resource-recommendation", ResourceRecommendationAPIView.as_view()),
+    path("ai/web-search", WebSearchAPIView.as_view()),
 
     # GraphRAG API
-    urlpatterns.append(path(f"{prefix}/graph-rag", GraphRAGAPIView.as_view()))
+    path("ai/graph-rag", GraphRAGAPIView.as_view()),
+]
