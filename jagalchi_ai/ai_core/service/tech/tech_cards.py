@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+from jagalchi_ai.ai_core.client import GeminiClient
 from jagalchi_ai.ai_core.common.hashing import stable_hash_json
 from jagalchi_ai.ai_core.common.nlp.summarization import map_reduce_summary
 from jagalchi_ai.ai_core.common.nlp.text_utils import cheap_embed, extractive_summary
@@ -36,18 +37,21 @@ class TechCardService:
         self,
         snapshot_store: Optional[SnapshotStore] = None,
         web_search: Optional[WebSearchService] = None,
+        llm_client: Optional[GeminiClient] = None,
     ) -> None:
         """
         기술 카드 생성에 필요한 의존성을 초기화합니다.
 
         @param {Optional[SnapshotStore]} snapshot_store - 스냅샷 저장소.
         @param {Optional[WebSearchService]} web_search - 웹 검색 서비스.
+        @param {Optional[GeminiClient]} llm_client - LLM 클라이언트.
         @returns {None} 내부 서비스 구성을 완료합니다.
         """
         self.snapshot_store = snapshot_store or SnapshotStore()
         self._reel = ReelPipeline()
         self._doc_watcher = DocWatcher()
         self._web_search = web_search or WebSearchService()
+        self._llm_client = llm_client or GeminiClient()
 
     def get_or_create(self, tech_slug: str, prompt_version: str = "tech_card_v1") -> Dict[str, object]:
         """
@@ -84,6 +88,38 @@ class TechCardService:
         change_summary = self._detect_changes(sources)
         reliability_metrics = self._calc_reliability(sources)
 
+        llm_payload = self._compose_card_with_llm(
+            tech_slug=tech_slug,
+            summary=summary,
+            sources=sources,
+            pitfalls=pitfalls,
+            prompt_version=prompt_version,
+        )
+
+        if llm_payload:
+            summary = llm_payload["summary"]
+            why_it_matters = llm_payload["why_it_matters"]
+            when_to_use = llm_payload["when_to_use"]
+            alternatives = llm_payload["alternatives"]
+            pitfalls = llm_payload["pitfalls"]
+            learning_path = llm_payload["learning_path"]
+            model_version = llm_payload["model_version"]
+        else:
+            why_it_matters = [
+                "업계 표준에 가까운 사용 사례를 확보할 수 있다",
+                "팀 협업과 유지보수에 필요한 패턴을 제공한다",
+            ]
+            when_to_use = [
+                "UI/서비스의 구조를 빠르게 확장해야 할 때",
+                "문서와 커뮤니티 리소스가 풍부한 기술을 원할 때",
+            ]
+            alternatives = _ALTERNATIVE_MAP.get(tech_slug, [])
+            learning_path = [
+                {"stage": "basic", "items": ["핵심 개념 이해", "기본 예제 구현"]},
+                {"stage": "practice", "items": ["작은 기능 단위 프로젝트", "성능/품질 개선"]},
+            ]
+            model_version = "compose_v1"
+
         latest_fetch = max((source["fetched_at"] for source in sources), default="2025-01-01")
         payload = {
             "id": f"card_{tech_slug}",
@@ -93,20 +129,11 @@ class TechCardService:
             "version": datetime.utcnow().date().isoformat(),
             "summary": summary,
             "summary_vector": cheap_embed(summary),
-            "why_it_matters": [
-                "업계 표준에 가까운 사용 사례를 확보할 수 있다",
-                "팀 협업과 유지보수에 필요한 패턴을 제공한다",
-            ],
-            "when_to_use": [
-                "UI/서비스의 구조를 빠르게 확장해야 할 때",
-                "문서와 커뮤니티 리소스가 풍부한 기술을 원할 때",
-            ],
-            "alternatives": _ALTERNATIVE_MAP.get(tech_slug, []),
+            "why_it_matters": why_it_matters,
+            "when_to_use": when_to_use,
+            "alternatives": alternatives,
             "pitfalls": pitfalls,
-            "learning_path": [
-                {"stage": "basic", "items": ["핵심 개념 이해", "기본 예제 구현"]},
-                {"stage": "practice", "items": ["작은 기능 단위 프로젝트", "성능/품질 개선"]},
-            ],
+            "learning_path": learning_path,
             "metadata": {
                 "language": reel.metadata.get("language") or "unknown",
                 "license": reel.metadata.get("license") or "unknown",
@@ -122,7 +149,7 @@ class TechCardService:
                 for source in sources
             ],
             "generated_by": {
-                "model_version": "compose_v1",
+                "model_version": model_version,
                 "prompt_version": prompt_version,
             },
         }
@@ -275,3 +302,133 @@ class TechCardService:
             seen.add(url)
             deduped.append(source)
         return deduped
+
+    def _compose_card_with_llm(
+        self,
+        tech_slug: str,
+        summary: str,
+        sources: List[Dict[str, str]],
+        pitfalls: List[str],
+        prompt_version: str,
+    ) -> Optional[Dict[str, object]]:
+        """
+        LLM을 사용해 기술 카드 본문을 구성합니다.
+
+        @param {str} tech_slug - 기술 식별자.
+        @param {str} summary - 기존 요약문.
+        @param {List[Dict[str, str]]} sources - 소스 목록.
+        @param {List[str]} pitfalls - 기본 주의사항 목록.
+        @param {str} prompt_version - 프롬프트 버전.
+        @returns {Optional[Dict[str, object]]} LLM 기반 카드 구성 결과.
+        """
+        if not self._llm_client.available():
+            return None
+
+        source_summaries = [
+            {
+                "title": source.get("title", ""),
+                "url": source.get("url", ""),
+                "fetched_at": source.get("fetched_at", ""),
+                "summary": extractive_summary(source.get("content", ""), max_sentences=2),
+            }
+            for source in sources
+        ]
+
+        prompt = (
+            "아래 정보를 참고해서 기술 카드 JSON을 작성해줘. 반드시 JSON만 반환해.\n"
+            "키: summary, why_it_matters, when_to_use, alternatives, pitfalls, learning_path\n"
+            "- summary: 1~2문장 요약\n"
+            "- why_it_matters/when_to_use/pitfalls: 각 2~4개\n"
+            "- alternatives: {slug, why} 리스트 (가능하면 1~3개)\n"
+            "- learning_path: [{stage, items}] 형태로 basic/practice 2단계 권장\n"
+            f"tech_slug: {tech_slug}\n"
+            f"기존 요약: {summary}\n"
+            f"기본 pitfalls: {pitfalls}\n"
+            f"소스 요약: {source_summaries}\n"
+            f"기본 대안 후보: {_ALTERNATIVE_MAP.get(tech_slug, [])}\n"
+        )
+
+        response = self._llm_client.generate_json(prompt)
+        data = response.data if response.data else None
+        if not data:
+            return None
+
+        normalized = _normalize_card_payload(
+            data,
+            fallback={
+                "summary": summary,
+                "why_it_matters": [
+                    "업계 표준에 가까운 사용 사례를 확보할 수 있다",
+                    "팀 협업과 유지보수에 필요한 패턴을 제공한다",
+                ],
+                "when_to_use": [
+                    "UI/서비스의 구조를 빠르게 확장해야 할 때",
+                    "문서와 커뮤니티 리소스가 풍부한 기술을 원할 때",
+                ],
+                "alternatives": _ALTERNATIVE_MAP.get(tech_slug, []),
+                "pitfalls": pitfalls,
+                "learning_path": [
+                    {"stage": "basic", "items": ["핵심 개념 이해", "기본 예제 구현"]},
+                    {"stage": "practice", "items": ["작은 기능 단위 프로젝트", "성능/품질 개선"]},
+                ],
+            },
+        )
+        normalized["model_version"] = self._llm_client.model_name
+        normalized["prompt_version"] = prompt_version
+        return normalized
+
+
+def _normalize_card_payload(payload: Dict[str, object], fallback: Dict[str, object]) -> Dict[str, object]:
+    """
+    LLM 응답을 스키마에 맞게 정규화합니다.
+
+    @param {Dict[str, object]} payload - LLM 응답 데이터.
+    @param {Dict[str, object]} fallback - 기본값 페이로드.
+    @returns {Dict[str, object]} 정규화된 페이로드.
+    """
+    summary = payload.get("summary")
+    if not isinstance(summary, str) or not summary.strip():
+        summary = fallback["summary"]
+
+    def _list_of_str(value, default):
+        if isinstance(value, list) and all(isinstance(item, str) for item in value) and value:
+            return value
+        return default
+
+    def _learning_path(value, default):
+        if not isinstance(value, list):
+            return default
+        cleaned = []
+        for item in value:
+            if not isinstance(item, dict):
+                continue
+            stage = item.get("stage")
+            items = item.get("items")
+            if not isinstance(stage, str) or not isinstance(items, list):
+                continue
+            if not all(isinstance(i, str) for i in items):
+                continue
+            cleaned.append({"stage": stage, "items": items})
+        return cleaned if cleaned else default
+
+    def _alternatives(value, default):
+        if not isinstance(value, list):
+            return default
+        cleaned = []
+        for item in value:
+            if not isinstance(item, dict):
+                continue
+            slug = item.get("slug")
+            why = item.get("why")
+            if isinstance(slug, str) and isinstance(why, str):
+                cleaned.append({"slug": slug, "why": why})
+        return cleaned if cleaned else default
+
+    return {
+        "summary": summary,
+        "why_it_matters": _list_of_str(payload.get("why_it_matters"), fallback["why_it_matters"]),
+        "when_to_use": _list_of_str(payload.get("when_to_use"), fallback["when_to_use"]),
+        "alternatives": _alternatives(payload.get("alternatives"), fallback["alternatives"]),
+        "pitfalls": _list_of_str(payload.get("pitfalls"), fallback["pitfalls"]),
+        "learning_path": _learning_path(payload.get("learning_path"), fallback["learning_path"]),
+    }
