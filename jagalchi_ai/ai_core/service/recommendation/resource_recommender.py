@@ -19,6 +19,9 @@ from langchain_core.documents import Document as LangchainDocument
 class ResourceRecommendationService:
     """자료 추천 검색 서비스."""
 
+    DEFAULT_RECENCY_DAYS = WebSearchService.DEFAULT_RECENCY_DAYS
+    """최신 자료 우선 검색 기본 기간(일)."""
+
     def __init__(
         self,
         snapshot_store: Optional[SnapshotStore] = None,
@@ -33,26 +36,43 @@ class ResourceRecommendationService:
         self._retriever = self._build_retriever()
         self._web_search = web_search or WebSearchService(snapshot_store=self._snapshot_store)
 
-    def recommend(self, query: str, top_k: int = 5) -> Dict[str, object]:
+    def recommend(
+        self,
+        query: str,
+        top_k: int = 5,
+        recency_days: Optional[int] = DEFAULT_RECENCY_DAYS,
+    ) -> Dict[str, object]:
         """
         @param query 검색 질의.
         @param top_k 추천 개수.
+        @param recency_days 최신 자료 필터 기간(일).
         @returns 자료 추천 결과 JSON.
         """
         cache_key = stable_hash_json(
-            {"query": query, "top_k": top_k, "web": self._web_search.available()}
+            {
+                "query": query,
+                "top_k": top_k,
+                "web": self._web_search.available(),
+                "recency_days": recency_days,
+            }
         )
         snapshot = self._snapshot_store.get_or_create(
             cache_key,
-            version="resource_rec_v2",
-            builder=lambda: self._build_payload(query, top_k),
+            version="resource_rec_v3",
+            builder=lambda: self._build_payload(query, top_k, recency_days),
         )
         return snapshot.payload
 
-    def _build_payload(self, query: str, top_k: int) -> Dict[str, object]:
+    def _build_payload(
+        self,
+        query: str,
+        top_k: int,
+        recency_days: Optional[int],
+    ) -> Dict[str, object]:
         """
         @param query 검색 질의.
         @param top_k 추천 개수.
+        @param recency_days 최신 자료 필터 기간(일).
         @returns 추천 결과 페이로드.
         """
         local_results = self._retriever.search(query, top_k=top_k)
@@ -65,7 +85,11 @@ class ResourceRecommendationService:
             }
             for item in local_results
         ]
-        web_results = self._web_search.search(query, top_k=top_k) if self._web_search.available() else []
+        web_results = (
+            self._web_search.search(query, top_k=top_k, recency_days=recency_days)
+            if self._web_search.available()
+            else []
+        )
         web_items = [
             {
                 "title": result.get("title", ""),

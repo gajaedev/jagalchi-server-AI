@@ -144,7 +144,11 @@ class TechCardService:
             for source in TECH_SOURCES.get(tech_slug, [])
         ]
         query = f"{tech_slug} official documentation"
-        web_sources = self._web_search.search(query, top_k=3)
+        web_sources = self._web_search.search(
+            query,
+            top_k=3,
+            recency_days=WebSearchService.DEFAULT_RECENCY_DAYS,
+        )
         merged = self._dedupe_sources(web_sources + local_sources)
         return merged
 

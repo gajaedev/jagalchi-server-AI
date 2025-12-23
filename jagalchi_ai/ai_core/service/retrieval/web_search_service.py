@@ -28,11 +28,11 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from jagalchi_ai.ai_core.client import ExaSearchClient, TavilySearchClient
+from jagalchi_ai.ai_core.client import ExaSearchClient, ExaSearchOptions, TavilySearchClient
 from jagalchi_ai.ai_core.common.hashing import stable_hash_json
 from jagalchi_ai.ai_core.repository.snapshot_store import SnapshotStore
 
@@ -151,7 +151,10 @@ class WebSearchService:
     DEFAULT_TOP_K = 5
     """기본 검색 결과 수."""
 
-    CACHE_VERSION = "web_search_v3"
+    DEFAULT_RECENCY_DAYS = 30
+    """최신 자료 우선 검색 기본 기간(일)."""
+
+    CACHE_VERSION = "web_search_v4"
     """캐시 버전 (변경 시 기존 캐시 무효화)."""
 
     # -------------------------------------------------------------------------
@@ -268,6 +271,7 @@ class WebSearchService:
         top_k: int = DEFAULT_TOP_K,
         engine: SearchEngine = SearchEngine.ALL,
         use_cache: bool = True,
+        recency_days: Optional[int] = DEFAULT_RECENCY_DAYS,
     ) -> List[Dict[str, Any]]:
         """
         웹 검색을 수행하고 결과를 반환합니다.
@@ -284,11 +288,14 @@ class WebSearchService:
                 사용할 검색 엔진 (기본: 모두 사용).
             use_cache:
                 캐시 사용 여부 (기본: True).
+            recency_days:
+                최신 문서를 우선 찾기 위한 기간(일). None이면 제한 없음.
 
         @param query 검색 쿼리.
         @param top_k 반환할 최대 결과 수.
         @param engine 사용할 검색 엔진.
         @param use_cache 캐시 사용 여부.
+        @param recency_days 최신 자료 필터 기간(일).
         @returns 검색 결과 리스트(딕셔너리 배열).
 
         Example:
@@ -308,6 +315,7 @@ class WebSearchService:
             "query": query,
             "top_k": top_k,
             "engines": engines,
+            "recency_days": recency_days,
         })
 
         # 캐시 사용 시 스냅샷 조회
@@ -315,29 +323,50 @@ class WebSearchService:
             snapshot = self._snapshot_store.get_or_create(
                 cache_key,
                 version=self.CACHE_VERSION,
-                builder=lambda: self._fetch(query, top_k, engines),
-                metadata={"query": query, "engines": engines},
+                builder=lambda: self._fetch(query, top_k, engines, recency_days),
+                metadata={"query": query, "engines": engines, "recency_days": recency_days},
             )
             return snapshot.payload.get("results", [])
         else:
             # 캐시 미사용 시 직접 검색
-            payload = self._fetch(query, top_k, engines)
+            payload = self._fetch(query, top_k, engines, recency_days)
             return payload.get("results", [])
 
     def search_with_metadata(
         self,
         query: str,
         top_k: int = DEFAULT_TOP_K,
+        engine: SearchEngine = SearchEngine.ALL,
+        use_cache: bool = True,
+        recency_days: Optional[int] = DEFAULT_RECENCY_DAYS,
     ) -> Dict[str, Any]:
         """
         검색 결과와 메타데이터를 함께 반환합니다.
 
         @param query 검색 쿼리.
         @param top_k 최대 결과 수.
+        @param engine 사용할 검색 엔진.
+        @param use_cache 캐시 사용 여부.
+        @param recency_days 최신 자료 필터 기간(일).
         @returns 결과와 메타데이터를 포함한 딕셔너리.
         """
-        engines = self._get_engines_to_use(SearchEngine.ALL)
-        return self._fetch(query, top_k, engines)
+        engines = self._get_engines_to_use(engine)
+        cache_key = stable_hash_json({
+            "query": query,
+            "top_k": top_k,
+            "engines": engines,
+            "recency_days": recency_days,
+            "metadata": True,
+        })
+        if use_cache:
+            snapshot = self._snapshot_store.get_or_create(
+                cache_key,
+                version=self.CACHE_VERSION,
+                builder=lambda: self._fetch(query, top_k, engines, recency_days),
+                metadata={"query": query, "engines": engines, "recency_days": recency_days},
+            )
+            return snapshot.payload
+        return self._fetch(query, top_k, engines, recency_days)
 
     def get_search_context(
         self,
@@ -406,6 +435,7 @@ class WebSearchService:
         query: str,
         top_k: int,
         engines: List[str],
+        recency_days: Optional[int],
     ) -> Dict[str, Any]:
         """
         실제 검색을 수행하고 결과를 반환합니다.
@@ -413,17 +443,22 @@ class WebSearchService:
         @param query 검색 쿼리.
         @param top_k 최대 결과 수.
         @param engines 사용할 엔진 목록.
+        @param recency_days 최신 자료 필터 기간(일).
         @returns 검색 결과 페이로드.
         """
         if not engines:
             return self._create_empty_response(query)
 
-        today = datetime.utcnow().date().isoformat()
+        today_date = datetime.utcnow().date()
+        today = today_date.isoformat()
+        start_date = None
+        if recency_days is not None and recency_days > 0:
+            start_date = (today_date - timedelta(days=recency_days)).isoformat()
         results: List[Dict[str, Any]] = []
 
         # Tavily 검색
         if "tavily" in engines and self._tavily.available:
-            tavily_results = self._search_with_tavily(query, top_k, today)
+            tavily_results = self._search_with_tavily(query, top_k, today, recency_days)
             results.extend(tavily_results)
             logger.debug(
                 "Tavily 검색 완료",
@@ -432,7 +467,7 @@ class WebSearchService:
 
         # Exa 검색
         if "exa" in engines and self._exa.available():
-            exa_results = self._search_with_exa(query, top_k, today)
+            exa_results = self._search_with_exa(query, top_k, today, start_date)
             results.extend(exa_results)
             logger.debug(
                 "Exa 검색 완료",
@@ -455,6 +490,7 @@ class WebSearchService:
         query: str,
         top_k: int,
         today: str,
+        recency_days: Optional[int],
     ) -> List[Dict[str, Any]]:
         """
         Tavily 검색을 수행합니다.
@@ -462,11 +498,15 @@ class WebSearchService:
         @param query 검색 쿼리.
         @param top_k 최대 결과 수.
         @param today 오늘 날짜 문자열.
+        @param recency_days 최신 자료 필터 기간(일).
         @returns Tavily 검색 결과 리스트.
         """
         results = []
         try:
-            for result in self._tavily.search(query, max_results=top_k):
+            search_kwargs: Dict[str, Any] = {}
+            if recency_days is not None and recency_days > 0:
+                search_kwargs["days"] = recency_days
+            for result in self._tavily.search(query, max_results=top_k, **search_kwargs):
                 results.append({
                     "title": result.title,
                     "url": result.url,
@@ -488,6 +528,7 @@ class WebSearchService:
         query: str,
         top_k: int,
         today: str,
+        start_date: Optional[str],
     ) -> List[Dict[str, Any]]:
         """
         Exa 검색을 수행합니다.
@@ -495,11 +536,23 @@ class WebSearchService:
         @param query 검색 쿼리.
         @param top_k 최대 결과 수.
         @param today 오늘 날짜 문자열.
+        @param start_date 최신 자료 시작 날짜(ISO).
         @returns Exa 검색 결과 리스트.
         """
         results = []
         try:
-            for result in self._exa.search(query, max_results=top_k):
+            if start_date:
+                options = ExaSearchOptions(
+                    num_results=top_k,
+                    start_published_date=start_date,
+                    end_published_date=today,
+                    include_text=True,
+                )
+                exa_results = self._exa.search_with_options(query, options)
+            else:
+                exa_results = self._exa.search(query, max_results=top_k)
+
+            for result in exa_results:
                 results.append({
                     "title": result.title,
                     "url": result.url,

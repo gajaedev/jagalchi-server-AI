@@ -44,25 +44,43 @@ class DemoAIAPIView(APIView):
     """전체 AI 기능을 한 번에 확인하는 데모 엔드포인트."""
 
     @extend_schema(
+        summary="AI 데모 통합",
+        description=(
+            "Jaglachi AI 핵심 기능을 한 번에 호출하는 통합 데모 API입니다. "
+            "학습기록 피드백, 연관 로드맵, 기술 카드/태그, 코멘트 인텔리전스, "
+            "학습 패턴, GraphRAG, 로드맵 생성/추천, 학습 코치까지 묶어서 반환합니다.\n\n"
+            "응답 필드 요약:\n"
+            "- record_coach: 학습기록 루브릭/개선안\n"
+            "- related_roadmaps: 연관 로드맵 후보\n"
+            "- tech_card / tech_fingerprint: 기술 카드 + 태그 지문\n"
+            "- comment_digest / duplicate_suggest: 코멘트 요약/중복 질문\n"
+            "- resource_recommendation: 자료 추천\n"
+            "- learning_pattern: 학습 패턴 분석\n"
+            "- graph_rag_context: 그래프 근거\n"
+            "- roadmap_generated / roadmap_recommendation: 생성/추천\n"
+            "- learning_coach: 학습 코치 응답\n\n"
+            "프론트 사용 팁:\n"
+            "- 개발 중 대시보드/카드 UI의 샘플 데이터를 한 번에 얻고 싶을 때 사용하세요."
+        ),
         parameters=[
-            OpenApiParameter("roadmap_id", OpenApiTypes.STR, required=False, description="로드맵 ID"),
-            OpenApiParameter("tech_slug", OpenApiTypes.STR, required=False, description="기술 카드 슬러그"),
-            OpenApiParameter("user_id", OpenApiTypes.STR, required=False, description="사용자 ID"),
-            OpenApiParameter("question", OpenApiTypes.STR, required=False, description="질문/검색 문장"),
-            OpenApiParameter("goal", OpenApiTypes.STR, required=False, description="로드맵 생성 목표"),
+            OpenApiParameter("roadmap_id", OpenApiTypes.STR, required=False, description="로드맵 ID (기본: rm_frontend)"),
+            OpenApiParameter("tech_slug", OpenApiTypes.STR, required=False, description="기술 카드 슬러그 (기본: react)"),
+            OpenApiParameter("user_id", OpenApiTypes.STR, required=False, description="사용자 ID (기본: user_1)"),
+            OpenApiParameter("question", OpenApiTypes.STR, required=False, description="질문/검색 문장 (기본 예시 포함)"),
+            OpenApiParameter("goal", OpenApiTypes.STR, required=False, description="로드맵 생성 목표 문장"),
             OpenApiParameter("target_role", OpenApiTypes.STR, required=False, description="추천 대상 역할"),
             OpenApiParameter(
                 "compose_level",
                 OpenApiTypes.STR,
                 required=False,
-                description="quick/full",
+                description="답변 상세 수준 (quick: 캐시/로컬 중심, full: LLM 포함)",
                 enum=["quick", "full"],
             ),
             OpenApiParameter(
                 "include_rationale",
                 OpenApiTypes.BOOL,
                 required=False,
-                description="태그 rationale 포함 여부",
+                description="태그 rationale 포함 여부 (true/false)",
             ),
         ],
         responses={200: OpenApiTypes.OBJECT},
@@ -107,7 +125,11 @@ class DemoAIAPIView(APIView):
         tech_card = _tech_card(tech_slug)
         tech_fingerprint = _tech_fingerprint(roadmap, include_rationale)
         comment_digest, duplicate_suggest = _comment_insights(roadmap.roadmap_id, question)
-        resource_recommendation = _resource_recommendation(question, top_k=3)
+        resource_recommendation = _resource_recommendation(
+            question,
+            top_k=3,
+            recency_days=ResourceRecommendationService.DEFAULT_RECENCY_DAYS,
+        )
         learning_pattern = _learning_pattern(user_id)
         graph_rag = GraphRAGService(mock_data.ROADMAPS)
         graph_context = graph_rag.build_context(question, top_k=3)
@@ -143,6 +165,18 @@ class RecordCoachAPIView(APIView):
     """Record Coach 단일 응답."""
 
     @extend_schema(
+        summary="학습 기록 피드백 (Record Coach)",
+        description=(
+            "학습 기록을 루브릭으로 점수화하고 개선 포인트/수정 제안을 제공합니다. "
+            "compose_level=quick은 점수/질문 중심으로 빠르게 반환하며, "
+            "compose_level=full은 LLM 문장화까지 포함합니다.\n\n"
+            "응답 필드 요약:\n"
+            "- scores: evidence/structure/specificity/reproducibility/quality\n"
+            "- strengths/gaps: 장점/보완점 리스트\n"
+            "- rewrite_suggestions: 포트폴리오용 문장/메모 개선안\n"
+            "- followup_questions: 기록 보완 질문\n"
+            "- retrieval_evidence: 근거 스니펫 목록"
+        ),
         parameters=[
             OpenApiParameter("roadmap_id", OpenApiTypes.STR, required=False, description="로드맵 ID"),
             OpenApiParameter("node_id", OpenApiTypes.STR, required=False, description="로드맵 노드 ID"),
@@ -150,7 +184,7 @@ class RecordCoachAPIView(APIView):
                 "compose_level",
                 OpenApiTypes.STR,
                 required=False,
-                description="quick/full",
+                description="quick(점수/질문 중심) 또는 full(문장 개선 포함)",
                 enum=["quick", "full"],
             ),
         ],
@@ -173,6 +207,15 @@ class RelatedRoadmapsAPIView(APIView):
     """연관 로드맵 추천 응답."""
 
     @extend_schema(
+        summary="연관 로드맵 추천",
+        description=(
+            "행동/콘텐츠/그래프 유사도를 종합하여 연관 로드맵 후보를 반환합니다. "
+            "LLM 없이 점수 기반으로 랭킹되며, reasons 필드로 추천 근거를 숫자화합니다.\n\n"
+            "응답 필드 요약:\n"
+            "- candidates: related_roadmap_id/score/reasons\n"
+            "- evidence_snapshot: 랭킹 피처 스냅샷\n"
+            "- model_version: 랭커 버전"
+        ),
         parameters=[OpenApiParameter("roadmap_id", OpenApiTypes.STR, required=False, description="로드맵 ID")],
         responses=RelatedRoadmapsSerializer,
     )
@@ -190,6 +233,16 @@ class TechCardAPIView(APIView):
     """기술 카드 응답."""
 
     @extend_schema(
+        summary="기술 카드",
+        description=(
+            "기술의 요약/사용 시점/대안/주의사항/학습 경로를 카드 형태로 제공합니다. "
+            "카드는 소스 해시 기반 스냅샷으로 관리되어 동일 소스면 재생성되지 않습니다.\n\n"
+            "응답 필드 요약:\n"
+            "- summary/why_it_matters/when_to_use/pitfalls\n"
+            "- alternatives: 대안 기술 목록\n"
+            "- learning_path: 단계별 학습 제안\n"
+            "- sources: 출처 목록 (title/url/fetched_at)"
+        ),
         parameters=[OpenApiParameter("tech_slug", OpenApiTypes.STR, required=False, description="기술 슬러그")],
         responses=TechCardSerializer,
     )
@@ -207,6 +260,14 @@ class TechFingerprintAPIView(APIView):
     """기술 지문 태그 응답."""
 
     @extend_schema(
+        summary="기술 지문 자동 태깅",
+        description=(
+            "로드맵 텍스트에서 핵심 기술을 추출해 core/optional/alternative/deprecated "
+            "타입으로 분류합니다. include_rationale=true일 때만 근거 문장을 포함합니다.\n\n"
+            "응답 필드 요약:\n"
+            "- tags: tech_slug/type/confidence/rationale(optional)\n"
+            "- model_version/generated_at: 스냅샷 메타"
+        ),
         parameters=[
             OpenApiParameter("roadmap_id", OpenApiTypes.STR, required=False, description="로드맵 ID"),
             OpenApiParameter(
@@ -233,6 +294,14 @@ class CommentDigestAPIView(APIView):
     """코멘트 다이제스트 응답."""
 
     @extend_schema(
+        summary="코멘트 다이제스트",
+        description=(
+            "최근 코멘트에서 이슈 하이라이트와 병목 노드를 요약합니다. "
+            "기간(period_days) 기준으로 집계하고, 병목 점수는 질문 수/부정 반응/미해결 비율로 계산됩니다.\n\n"
+            "응답 필드 요약:\n"
+            "- highlights: 주요 이슈 문장\n"
+            "- bottlenecks: node_id/score/top_topics"
+        ),
         parameters=[
             OpenApiParameter("roadmap_id", OpenApiTypes.STR, required=False, description="로드맵 ID"),
             OpenApiParameter("period_days", OpenApiTypes.INT, required=False, description="기간(일)"),
@@ -255,6 +324,13 @@ class CommentDuplicateAPIView(APIView):
     """중복 질문 후보 응답."""
 
     @extend_schema(
+        summary="중복 질문 후보",
+        description=(
+            "질문 작성 시 유사한 기존 질문을 추천합니다. "
+            "LLM 없이 벡터 유사도 기반으로 빠르게 후보를 제시합니다.\n\n"
+            "응답 필드 요약:\n"
+            "- comment_id/snippet 목록"
+        ),
         parameters=[
             OpenApiParameter("roadmap_id", OpenApiTypes.STR, required=False, description="로드맵 ID"),
             OpenApiParameter("query", OpenApiTypes.STR, required=False, description="질문"),
@@ -279,20 +355,44 @@ class ResourceRecommendationAPIView(APIView):
     """자료 추천 응답."""
 
     @extend_schema(
+        summary="학습 자료 추천",
+        description=(
+            "로컬 지식베이스(BM25/Vector)와 최신 웹 검색 결과를 합쳐 "
+            "학습 자료를 추천합니다. 캐시는 쿼리/recency_days 기준으로 저장되며 "
+            "응답은 items 배열과 retrieval_evidence를 포함합니다.\n\n"
+            "응답 필드 요약:\n"
+            "- items: title/url/source/score 목록\n"
+            "- retrieval_evidence: 근거 스니펫 목록\n"
+            "- model_version, generated_at: 스냅샷 메타데이터\n\n"
+            "프론트 사용 팁:\n"
+            "- 최신 자료 우선이 필요하면 recency_days를 줄여 호출하세요."
+        ),
         parameters=[
-            OpenApiParameter("query", OpenApiTypes.STR, required=False, description="검색 질의"),
-            OpenApiParameter("top_k", OpenApiTypes.INT, required=False, description="추천 개수"),
+            OpenApiParameter("query", OpenApiTypes.STR, required=False, description="검색 질의 (예: 'React hooks 상태 관리')"),
+            OpenApiParameter("top_k", OpenApiTypes.INT, required=False, description="추천 개수 (기본 3)"),
+            OpenApiParameter(
+                "recency_days",
+                OpenApiTypes.INT,
+                required=False,
+                description="최신 자료 기준 기간(일). 기본 30, 0/미지정은 제한 없음",
+            ),
         ],
         responses=ResourceRecommendationSerializer,
     )
     def get(self, request) -> Response:
         """
-        @param request DRF 요청 객체 (query/top_k 사용).
+        @param request DRF 요청 객체 (query/top_k/recency_days 사용).
         @returns 자료 추천 결과 JSON.
         """
         query = request.GET.get("query") or "React useEffect 에러 해결 방법"
         top_k = int(request.GET.get("top_k") or 3)
-        payload = _resource_recommendation(query, top_k)
+        recency_days_param = request.GET.get("recency_days")
+        recency_days = (
+            int(recency_days_param)
+            if recency_days_param is not None
+            else ResourceRecommendationService.DEFAULT_RECENCY_DAYS
+        )
+        payload = _resource_recommendation(query, top_k, recency_days)
         return _serialize(ResourceRecommendationSerializer, payload)
 
 
@@ -300,6 +400,14 @@ class LearningPatternAPIView(APIView):
     """학습 패턴 응답."""
 
     @extend_schema(
+        summary="학습 패턴 분석",
+        description=(
+            "학습 이벤트 로그를 기반으로 활동 일수, 평균 세션 간격, 완료 속도 등을 요약합니다. "
+            "캐시 스냅샷으로 동일 입력에 대해 빠르게 응답합니다.\n\n"
+            "응답 필드 요약:\n"
+            "- patterns: active_days/avg_session_gap_days/completion_velocity\n"
+            "- recommendations: 학습 패턴 개선 제안"
+        ),
         parameters=[
             OpenApiParameter("user_id", OpenApiTypes.STR, required=False, description="사용자 ID"),
             OpenApiParameter("days", OpenApiTypes.INT, required=False, description="기간(일)"),
@@ -321,6 +429,15 @@ class GraphRAGAPIView(APIView):
     """GraphRAG 컨텍스트 응답."""
 
     @extend_schema(
+        summary="GraphRAG 컨텍스트",
+        description=(
+            "그래프 기반 RAG 검색 결과를 반환합니다. "
+            "근거 스니펫과 그래프 스냅샷(nodes/edges)을 함께 제공하여 "
+            "추천/요약/설명 UI의 근거로 사용할 수 있습니다.\n\n"
+            "응답 필드 요약:\n"
+            "- retrieval_evidence: source/id/snippet\n"
+            "- graph_snapshot: nodes/edges"
+        ),
         parameters=[
             OpenApiParameter("query", OpenApiTypes.STR, required=False, description="검색 질의"),
             OpenApiParameter("top_k", OpenApiTypes.INT, required=False, description="근거 개수"),
@@ -343,6 +460,14 @@ class RoadmapGeneratedAPIView(APIView):
     """GraphRAG 기반 로드맵 생성 응답."""
 
     @extend_schema(
+        summary="로드맵 생성",
+        description=(
+            "목표(goal)와 선호 태그를 기반으로 로드맵을 생성합니다. "
+            "compose_level=quick은 규칙 기반으로, full은 LLM 문장화를 포함합니다.\n\n"
+            "응답 필드 요약:\n"
+            "- nodes/edges/tags: 생성된 로드맵 구성 요소\n"
+            "- retrieval_evidence: 생성 근거 스니펫"
+        ),
         parameters=[
             OpenApiParameter("goal", OpenApiTypes.STR, required=False, description="목표"),
             OpenApiParameter("preferred_tags", OpenApiTypes.STR, required=False, description="태그(콤마 구분)"),
@@ -351,7 +476,7 @@ class RoadmapGeneratedAPIView(APIView):
                 "compose_level",
                 OpenApiTypes.STR,
                 required=False,
-                description="quick/full",
+                description="quick(규칙 기반) 또는 full(LLM 문장화 포함)",
                 enum=["quick", "full"],
             ),
         ],
@@ -381,6 +506,16 @@ class LearningCoachAPIView(APIView):
     """학습 코치 응답."""
 
     @extend_schema(
+        summary="학습 코치 Q&A",
+        description=(
+            "질문 의도 분류 → 도구 실행 → 답변 구성의 멀티스테이지 학습 코치 응답입니다. "
+            "compose_level=quick은 캐시/로컬 요약 중심, full은 LLM 정제까지 포함합니다.\n\n"
+            "응답 필드 요약:\n"
+            "- intent/toolchain/plan: 의도와 실행 계획\n"
+            "- answer: 최종 답변\n"
+            "- retrieval_evidence: 근거 스니펫\n"
+            "- behavior_summary: 동기/능력/이탈 위험도"
+        ),
         parameters=[
             OpenApiParameter("user_id", OpenApiTypes.STR, required=False, description="사용자 ID"),
             OpenApiParameter("question", OpenApiTypes.STR, required=False, description="질문"),
@@ -388,7 +523,7 @@ class LearningCoachAPIView(APIView):
                 "compose_level",
                 OpenApiTypes.STR,
                 required=False,
-                description="quick/full",
+                description="quick(캐시/로컬 중심) 또는 full(LLM 정제 포함)",
                 enum=["quick", "full"],
             ),
         ],
@@ -411,6 +546,15 @@ class RoadmapRecommendationAPIView(APIView):
     """그래프 기반 로드맵 추천 응답."""
 
     @extend_schema(
+        summary="그래프 기반 로드맵 추천",
+        description=(
+            "목표 역할과 강조 태그를 기준으로 그래프 온톨로지에서 "
+            "학습 순서를 추천합니다. GNN 예측 결과도 함께 제공합니다.\n\n"
+            "응답 필드 요약:\n"
+            "- nodes: node_id/status\n"
+            "- edges: 그래프 엣지\n"
+            "- gnn_predictions: 다음 학습 후보"
+        ),
         parameters=[
             OpenApiParameter("target_role", OpenApiTypes.STR, required=False, description="목표 역할"),
             OpenApiParameter("user_id", OpenApiTypes.STR, required=False, description="사용자 ID"),
@@ -515,13 +659,14 @@ def _comment_insights(roadmap_id: str, question: str):
     return digest, duplicates
 
 
-def _resource_recommendation(query: str, top_k: int):
+def _resource_recommendation(query: str, top_k: int, recency_days: int | None):
     """
     @param query 검색 질의.
     @param top_k 추천 개수.
+    @param recency_days 최신 자료 필터 기간(일).
     @returns 자료 추천 JSON.
     """
-    return ResourceRecommendationService().recommend(query, top_k=top_k)
+    return ResourceRecommendationService().recommend(query, top_k=top_k, recency_days=recency_days)
 
 
 def _learning_pattern(user_id: str):
@@ -600,7 +745,18 @@ class WebSearchAPIView(APIView):
 
     @extend_schema(
         summary="웹 검색 (Tavily/Exa)",
-        description="Tavily와 Exa 검색 엔진을 사용하여 웹에서 학습 자료를 검색합니다.",
+        description=(
+            "Tavily(웹 검색) + Exa(시맨틱 검색)을 조합해 최신 학습 자료를 수집합니다. "
+            "기본적으로 최근 N일(기본 30일) 내 문서를 우선하며, 엔진 선택과 기간 필터를 "
+            "파라미터로 제어할 수 있습니다.\n\n"
+            "응답 필드 요약:\n"
+            "- results: title/url/content/score/source/fetched_at\n"
+            "- engines_used: 실제 사용된 엔진 목록\n"
+            "- generated_at: 스냅샷 생성 시각\n\n"
+            "프론트 사용 팁:\n"
+            "- 최신성 강조: recency_days를 7~30으로 설정\n"
+            "- 출처 다양성: engine=all 권장"
+        ),
         parameters=[
             OpenApiParameter(
                 "query",
@@ -621,6 +777,12 @@ class WebSearchAPIView(APIView):
                 description="사용할 검색 엔진 (tavily/exa/all, 기본: all)",
                 enum=["tavily", "exa", "all"],
             ),
+            OpenApiParameter(
+                "recency_days",
+                OpenApiTypes.INT,
+                required=False,
+                description="최신 자료 기준 기간(일). 기본 30, 0/미지정은 제한 없음",
+            ),
         ],
         responses={200: WebSearchSerializer},
     )
@@ -628,7 +790,7 @@ class WebSearchAPIView(APIView):
         """
         웹 검색 요청을 처리하고 구조화된 검색 결과를 반환합니다.
 
-        @param {Request} request - DRF 요청 객체 (query/top_k/engine 파라미터 포함).
+        @param {Request} request - DRF 요청 객체 (query/top_k/engine/recency_days 파라미터 포함).
         @returns {Response} 검색 결과를 담은 직렬화된 응답.
         """
         from jagalchi_ai.ai_core.service.retrieval.web_search_service import (
@@ -639,6 +801,7 @@ class WebSearchAPIView(APIView):
         query = request.GET.get("query", "Python 학습 자료")
         top_k = min(int(request.GET.get("top_k") or 5), 20)
         engine_param = request.GET.get("engine", "all")
+        recency_days_param = request.GET.get("recency_days")
 
         # 검색 엔진 선택
         engine_map = {
@@ -650,7 +813,10 @@ class WebSearchAPIView(APIView):
 
         # 검색 수행
         service = WebSearchService()
-        result = service.search_with_metadata(query, top_k=top_k)
+        search_kwargs = {"query": query, "top_k": top_k, "engine": engine}
+        if recency_days_param is not None:
+            search_kwargs["recency_days"] = int(recency_days_param)
+        result = service.search_with_metadata(**search_kwargs)
 
         payload = {
             "query": result.get("query", query),
@@ -681,7 +847,15 @@ class DocumentRoadmapAPIView(APIView):
 
     @extend_schema(
         summary="문서 기반 로드맵 추천",
-        description="사용자가 제공한 문서를 AI가 분석하여 맞춤형 학습 로드맵을 추천합니다.",
+        description=(
+            "이력서/학습계획서 등 문서를 분석해 키워드와 관련 로드맵을 추천합니다. "
+            "문서 요약, 추출 키워드, 추천 근거를 함께 반환합니다.\n\n"
+            "응답 필드 요약:\n"
+            "- document_summary: 문서 요약\n"
+            "- extracted_keywords: 핵심 키워드\n"
+            "- recommended_roadmaps: 추천 로드맵 목록\n"
+            "- suggested_topics: 후속 학습 주제"
+        ),
         parameters=[
             OpenApiParameter(
                 "document",
@@ -737,7 +911,10 @@ class DocumentRoadmapAPIView(APIView):
 
     @extend_schema(
         summary="문서 기반 로드맵 추천 (POST)",
-        description="문서를 POST body로 제출하여 분석합니다.",
+        description=(
+            "문서를 JSON body로 제출해 분석합니다. GET과 동일한 스키마를 반환하며, "
+            "길이가 긴 문서는 POST를 권장합니다."
+        ),
         request={"application/json": {"type": "object", "properties": {"document": {"type": "string"}, "goal": {"type": "string"}}}},
         responses={200: DocumentRoadmapSerializer},
     )
@@ -794,7 +971,13 @@ class HealthCheckAPIView(APIView):
 
     @extend_schema(
         summary="헬스체크",
-        description="서버 상태 및 각 AI 서비스의 사용 가능 여부를 확인합니다.",
+        description=(
+            "서버 상태 및 외부 AI 서비스 연결 가능 여부를 반환합니다. "
+            "모니터링/배포 시 서비스 가용성 체크에 사용하세요.\n\n"
+            "응답 필드 요약:\n"
+            "- services: gemini/tavily/exa/graph_rag/semantic_cache 사용 가능 여부\n"
+            "- timestamp: 체크 시각"
+        ),
         responses={200: HealthCheckSerializer},
     )
     def get(self, request) -> Response:
