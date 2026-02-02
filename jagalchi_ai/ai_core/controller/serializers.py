@@ -349,3 +349,59 @@ class HealthCheckSerializer(serializers.Serializer):
     )
     timestamp = serializers.CharField(help_text="헬스체크 수행 일시")
 
+
+# =============================================================================
+# Init Data 및 Node Resource 관리 시리얼라이저
+# =============================================================================
+
+class InitDataSerializer(serializers.Serializer):
+    """Init 데이터 조회 응답 시리얼라이저."""
+    init_data_id = serializers.CharField()
+    roadmap_id = serializers.CharField()
+    content = serializers.CharField()
+    data_type = serializers.CharField()
+    filename = serializers.CharField(allow_null=True)
+    created_at = serializers.DateTimeField()
+    updated_at = serializers.DateTimeField()
+
+
+class InitDataCreateSerializer(serializers.Serializer):
+    """Init 데이터 생성 요청 시리얼라이저."""
+    roadmap_id = serializers.CharField()
+    content = serializers.CharField()
+    data_type = serializers.ChoiceField(choices=["file", "text"], default="text")
+    filename = serializers.CharField(required=False, allow_null=True)
+
+
+class InitDataUpdateSerializer(serializers.Serializer):
+    """Init 데이터 수정 요청 시리얼라이저."""
+    content = serializers.CharField()
+
+
+class NodeResourceSerializer(serializers.Serializer):
+    """노드 리소스 조회 응답 시리얼라이저."""
+    resource_id = serializers.CharField()
+    node_id = serializers.CharField()
+    title = serializers.CharField()
+    url = serializers.CharField()
+    source = serializers.CharField()
+    description = serializers.CharField(allow_null=True)
+    created_at = serializers.DateTimeField()
+
+
+class NodeResourceCreateSerializer(serializers.Serializer):
+    """노드 리소스 저장 요청 시리얼라이저."""
+    node_id = serializers.CharField()
+    title = serializers.CharField()
+    url = serializers.CharField()
+    source = serializers.CharField(default="web")
+    description = serializers.CharField(required=False, allow_null=True)
+
+
+class NodeDescriptionSerializer(serializers.Serializer):
+    """노드 설명 생성 응답 시리얼라이저."""
+    node_title = serializers.CharField()
+    description = serializers.CharField()
+    generated_at = serializers.DateTimeField()
+
+

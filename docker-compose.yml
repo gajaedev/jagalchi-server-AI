@@ -104,6 +104,30 @@ services:
       - jagalchi-network
 
   # ---------------------------------------------------------------------------
+  # MySQL 데이터베이스 서비스
+  # ---------------------------------------------------------------------------
+  db:
+    image: mysql:8.0
+    container_name: jagalchi-db
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: jagalchi_ai
+      MYSQL_USER: jagalchi_user
+      MYSQL_PASSWORD: jagalchi_password
+      MYSQL_ROOT_PASSWORD: root_password
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - jagalchi-network
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
   # Redis 캐시 서비스 (선택적 - 프로덕션에서 권장)
   # ---------------------------------------------------------------------------
   redis:
@@ -141,8 +165,12 @@ volumes:
   jagalchi-logs:
     driver: local
 
-  # 데이터베이스 영속화
+  # 데이터베이스 영속화 (SQLite/MySQL)
   jagalchi-db:
+    driver: local
+  
+  # MySQL 데이터
+  mysql-data:
     driver: local
 
   # pip 캐시

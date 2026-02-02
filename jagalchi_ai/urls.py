@@ -21,6 +21,12 @@ from jagalchi_ai.ai_core.controller.ai_views import (
     TechCardAPIView,
     TechFingerprintAPIView,
     WebSearchAPIView,
+    InitDataDetailAPIView,
+    InitDataListCreateAPIView,
+    NodeDescriptionAPIView,
+    NodeGenerationFromInitAPIView,
+    NodeResourceRecommendationAPIView,
+    NodeResourceSaveAPIView,
 )
 
 urlpatterns = [
@@ -60,4 +66,14 @@ urlpatterns = [
 
     # GraphRAG API
     path("ai/graph-rag", GraphRAGAPIView.as_view()),
+
+    # Init Data API
+    path("ai/init-data", InitDataListCreateAPIView.as_view()),
+    path("ai/init-data/<str:init_data_id>", InitDataDetailAPIView.as_view()),
+
+    # Node Content API
+    path("ai/node-generation", NodeGenerationFromInitAPIView.as_view()),
+    path("ai/node-description", NodeDescriptionAPIView.as_view()),
+    path("ai/node-resource-recommendation", NodeResourceRecommendationAPIView.as_view()),
+    path("ai/node-resource-save", NodeResourceSaveAPIView.as_view()),
 ]

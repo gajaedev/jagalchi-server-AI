@@ -20,6 +20,8 @@ from jagalchi_ai.ai_core.service.recommendation.related_roadmaps import RelatedR
 from jagalchi_ai.ai_core.service.recommendation.resource_recommender import ResourceRecommendationService
 from jagalchi_ai.ai_core.service.tech.tech_cards import TechCardService
 from jagalchi_ai.ai_core.service.tech.tech_fingerprint import TechFingerprintService
+from jagalchi_ai.ai_core.service.roadmap_management.init_data_service import InitDataService
+from jagalchi_ai.ai_core.service.content_generation.node_content_service import NodeContentService
 from jagalchi_ai.ai_core.controller.serializers import (
     CommentDigestSerializer,
     DemoResponseSerializer,
@@ -27,8 +29,14 @@ from jagalchi_ai.ai_core.controller.serializers import (
     DuplicateSuggestItemSerializer,
     GraphRAGContextSerializer,
     HealthCheckSerializer,
+    InitDataCreateSerializer,
+    InitDataSerializer,
+    InitDataUpdateSerializer,
     LearningCoachSerializer,
     LearningPatternSerializer,
+    NodeDescriptionSerializer,
+    NodeResourceCreateSerializer,
+    NodeResourceSerializer,
     RecordCoachSerializer,
     RelatedRoadmapsSerializer,
     ResourceRecommendationSerializer,
@@ -1054,3 +1062,156 @@ def _summarize_document(document: str) -> str:
         summary += "..."
 
     return f"문서 분석 결과: {summary}"
+
+
+# =============================================================================
+# Init Data 관리 API
+# =============================================================================
+
+class InitDataListCreateAPIView(APIView):
+    """Init Data 목록 조회 및 생성 API."""
+
+    @extend_schema(
+        summary="Init Data 목록 조회",
+        parameters=[OpenApiParameter("roadmap_id", OpenApiTypes.STR, required=True, description="로드맵 ID")],
+        responses={200: InitDataSerializer(many=True)},
+    )
+    def get(self, request) -> Response:
+        roadmap_id = request.GET.get("roadmap_id")
+        if not roadmap_id:
+            return Response({"error": "roadmap_id required"}, status=400)
+        
+        service = InitDataService()
+        data = service.get_list_by_roadmap(roadmap_id)
+        return _serialize(InitDataSerializer, data, many=True)
+
+    @extend_schema(
+        summary="Init Data 생성 (업로드/입력)",
+        request=InitDataCreateSerializer,
+        responses={201: InitDataSerializer},
+    )
+    def post(self, request) -> Response:
+        serializer = InitDataCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            service = InitDataService()
+            result = service.create_init_data(**serializer.validated_data)
+            return _serialize(InitDataSerializer, result)
+        return Response(serializer.errors, status=400)
+
+
+class InitDataDetailAPIView(APIView):
+    """Init Data 상세 조회, 수정, 삭제 API."""
+
+    @extend_schema(summary="Init Data 상세 조회", responses={200: InitDataSerializer})
+    def get(self, request, init_data_id) -> Response:
+        service = InitDataService()
+        data = service.get_init_data(init_data_id)
+        if not data:
+            return Response({"error": "Not found"}, status=404)
+        return _serialize(InitDataSerializer, data)
+
+    @extend_schema(summary="Init Data 수정", request=InitDataUpdateSerializer, responses={200: InitDataSerializer})
+    def put(self, request, init_data_id) -> Response:
+        serializer = InitDataUpdateSerializer(data=request.data)
+        if serializer.is_valid():
+            service = InitDataService()
+            result = service.update_init_data(init_data_id, serializer.validated_data["content"])
+            if not result:
+                return Response({"error": "Not found"}, status=404)
+            return _serialize(InitDataSerializer, result)
+        return Response(serializer.errors, status=400)
+
+    @extend_schema(summary="Init Data 삭제", responses={204: None})
+    def delete(self, request, init_data_id) -> Response:
+        service = InitDataService()
+        if service.delete_init_data(init_data_id):
+            return Response(status=204)
+        return Response({"error": "Not found"}, status=404)
+
+
+# =============================================================================
+# 노드 콘텐츠 생성 및 리소스 API
+# =============================================================================
+
+class NodeGenerationFromInitAPIView(APIView):
+    """Init 데이터 기반 노드 생성 API."""
+
+    @extend_schema(
+        summary="Init 데이터 기반 노드 생성",
+        parameters=[OpenApiParameter("init_data_id", OpenApiTypes.STR, required=True)],
+        responses={200: RoadmapGeneratedSerializer},
+    )
+    def get(self, request) -> Response:
+        init_data_id = request.GET.get("init_data_id")
+        if not init_data_id:
+            return Response({"error": "init_data_id required"}, status=400)
+        
+        service = NodeContentService()
+        try:
+            result = service.generate_nodes_from_init(init_data_id)
+            return Response(result)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=404)
+
+
+class NodeDescriptionAPIView(APIView):
+    """노드 설명 생성 API."""
+
+    @extend_schema(
+        summary="AI 노드 설명 생성",
+        parameters=[
+            OpenApiParameter("node_title", OpenApiTypes.STR, required=True),
+            OpenApiParameter("context", OpenApiTypes.STR, required=False),
+        ],
+        responses={200: NodeDescriptionSerializer},
+    )
+    def get(self, request) -> Response:
+        node_title = request.GET.get("node_title")
+        context = request.GET.get("context")
+        
+        service = NodeContentService()
+        description = service.generate_node_description(node_title, context)
+        
+        return Response({
+            "node_title": node_title,
+            "description": description,
+            "generated_at": datetime.utcnow()
+        })
+
+
+class NodeResourceRecommendationAPIView(APIView):
+    """노드 기반 자료 추천 API."""
+
+    @extend_schema(
+        summary="노드 주제 기반 자료 추천",
+        parameters=[
+            OpenApiParameter("node_id", OpenApiTypes.STR, required=True),
+            OpenApiParameter("roadmap_id", OpenApiTypes.STR, required=True),
+        ],
+        responses={200: ResourceRecommendationSerializer},
+    )
+    def get(self, request) -> Response:
+        node_id = request.GET.get("node_id")
+        roadmap_id = request.GET.get("roadmap_id")
+        
+        service = NodeContentService()
+        result = service.recommend_resources_for_node(node_id, roadmap_id)
+        return _serialize(ResourceRecommendationSerializer, result)
+
+
+class NodeResourceSaveAPIView(APIView):
+    """추천 자료 노드 저장 API."""
+
+    @extend_schema(
+        summary="추천 자료 노드에 저장",
+        request=NodeResourceCreateSerializer,
+        responses={201: NodeResourceSerializer},
+    )
+    def post(self, request) -> Response:
+        serializer = NodeResourceCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            service = NodeContentService()
+            result = service.save_resource_to_node(**serializer.validated_data)
+            return Response(_serialize(NodeResourceSerializer, result).data, status=201)
+        return Response(serializer.errors, status=400)
+
