@@ -810,14 +810,14 @@ def _serialize(serializer_class, payload, many: bool = False) -> Response:
 
 
 # =============================================================================
-# 웹 검색 API (Tavily/Exa)
+# 웹 검색 API (Apify)
 # =============================================================================
 
 class WebSearchAPIView(APIView):
     """
     웹 검색 API 엔드포인트.
 
-    Tavily와 Exa 검색 엔진을 활용하여 학습 자료를 검색합니다.
+    Apify Actor 기반 검색 엔진을 활용하여 학습 자료를 검색합니다.
     검색 결과는 관련성 점수로 정렬되어 반환됩니다.
 
     사용 예시:
@@ -825,9 +825,9 @@ class WebSearchAPIView(APIView):
     """
 
     @extend_schema(
-        summary="웹 검색 (Tavily/Exa)",
+        summary="웹 검색 (Apify)",
         description=(
-            "Tavily(웹 검색) + Exa(시맨틱 검색)을 조합해 최신 학습 자료를 수집합니다. "
+            "Apify Actor(apify/google-search-scraper) 기반으로 최신 학습 자료를 수집합니다. "
             "기본적으로 최근 N일(기본 30일) 내 문서를 우선하며, 엔진 선택과 기간 필터를 "
             "파라미터로 제어할 수 있습니다.\n\n"
             "응답 필드 요약:\n"
@@ -855,8 +855,8 @@ class WebSearchAPIView(APIView):
                 "engine",
                 OpenApiTypes.STR,
                 required=False,
-                description="사용할 검색 엔진 (tavily/exa/all, 기본: all)",
-                enum=["tavily", "exa", "all"],
+                description="사용할 검색 엔진 (apify/all, 기본: all)",
+                enum=["apify", "all", "tavily", "exa"],
             ),
             OpenApiParameter(
                 "recency_days",
@@ -886,6 +886,7 @@ class WebSearchAPIView(APIView):
 
         # 검색 엔진 선택
         engine_map = {
+            "apify": SearchEngine.APIFY,
             "tavily": SearchEngine.TAVILY,
             "exa": SearchEngine.EXA,
             "all": SearchEngine.ALL,
@@ -1056,7 +1057,7 @@ class HealthCheckAPIView(APIView):
             "서버 상태 및 외부 AI 서비스 연결 가능 여부를 반환합니다. "
             "모니터링/배포 시 서비스 가용성 체크에 사용하세요.\n\n"
             "응답 필드 요약:\n"
-            "- services: gemini/tavily/exa/graph_rag/semantic_cache 사용 가능 여부\n"
+            "- services: gemini/apify/graph_rag/semantic_cache 사용 가능 여부\n"
             "- timestamp: 체크 시각"
         ),
         responses={200: HealthCheckSerializer},
@@ -1068,20 +1069,18 @@ class HealthCheckAPIView(APIView):
         @param {Request} request - DRF 요청 객체.
         @returns {Response} 서비스 상태를 담은 직렬화된 응답.
         """
-        from jagalchi_ai.ai_core.client import GeminiClient, TavilySearchClient, ExaSearchClient
+        from jagalchi_ai.ai_core.client import GeminiClient, ApifySearchClient
 
         # 각 서비스 상태 확인
         gemini_available = GeminiClient().available()
-        tavily_available = TavilySearchClient().available
-        exa_available = ExaSearchClient().available()
+        apify_available = ApifySearchClient().available
 
         payload = {
             "status": "ok",
             "version": "1.0.0",
             "services": {
                 "gemini": gemini_available,
-                "tavily": tavily_available,
-                "exa": exa_available,
+                "apify": apify_available,
                 "graph_rag": True,
                 "semantic_cache": True,
             },

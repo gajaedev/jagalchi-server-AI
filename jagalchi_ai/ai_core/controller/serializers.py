@@ -287,7 +287,7 @@ class DemoResponseSerializer(serializers.Serializer):
 
 
 # =============================================================================
-# 웹 검색 API 시리얼라이저 (Tavily/Exa)
+# 웹 검색 API 시리얼라이저 (Apify)
 # =============================================================================
 
 class WebSearchResultSerializer(serializers.Serializer):
@@ -296,7 +296,7 @@ class WebSearchResultSerializer(serializers.Serializer):
     url = serializers.CharField(help_text="검색 결과 URL")
     content = serializers.CharField(help_text="검색 결과 내용 요약")
     score = serializers.FloatField(help_text="관련성 점수 (0.0 ~ 1.0)")
-    source = serializers.CharField(help_text="검색 엔진 출처 (tavily/exa)")
+    source = serializers.CharField(help_text="검색 엔진 출처 (apify)")
     fetched_at = serializers.CharField(help_text="검색 수행 일시")
 
 
