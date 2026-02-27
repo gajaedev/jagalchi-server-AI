@@ -166,6 +166,9 @@ class ResourceItemSerializer(serializers.Serializer):
     url = serializers.CharField()
     source = serializers.CharField()
     score = serializers.FloatField()
+    why_recommended = serializers.CharField(help_text="추천 이유(예: 한글 자료, 공식 문서, 국내 학습 플랫폼)")
+    difficulty = serializers.CharField(help_text="난이도 추정(beginner/intermediate/advanced/unknown)")
+    estimated_minutes = serializers.IntegerField(allow_null=True, help_text="예상 학습 시간(분), 추정 불가 시 null")
 
 
 class ResourceRecommendationSerializer(serializers.Serializer):
@@ -298,6 +301,9 @@ class WebSearchResultSerializer(serializers.Serializer):
     score = serializers.FloatField(help_text="관련성 점수 (0.0 ~ 1.0)")
     source = serializers.CharField(help_text="검색 엔진 출처 (apify)")
     fetched_at = serializers.CharField(help_text="검색 수행 일시")
+    why_recommended = serializers.CharField(help_text="추천 이유(예: 한글 자료, 공식 문서, 국내 학습 플랫폼)")
+    difficulty = serializers.CharField(help_text="난이도 추정(beginner/intermediate/advanced/unknown)")
+    estimated_minutes = serializers.IntegerField(allow_null=True, help_text="예상 학습 시간(분), 추정 불가 시 null")
 
 
 class WebSearchSerializer(serializers.Serializer):
@@ -403,4 +409,3 @@ class NodeDescriptionSerializer(serializers.Serializer):
     node_title = serializers.CharField()
     description = serializers.CharField()
     generated_at = serializers.DateTimeField()
-

@@ -74,6 +74,7 @@ class EnvSettings(BaseSettings):
     AI_DEFAULT_MODEL: str = "gemini-2.5-flash"
     AI_TIMEOUT: int = 30
     AI_MAX_RETRIES: int = 3
+    AI_SEARCH_DOMAIN_BLACKLIST: str = ""
     
     # AI API 인증 (JWT)
     AI_AUTH_ENABLED: bool = True
@@ -362,6 +363,11 @@ AI_DISABLE_EXTERNAL = env.AI_DISABLE_EXTERNAL
 AI_DEFAULT_MODEL = env.AI_DEFAULT_MODEL
 AI_TIMEOUT = env.AI_TIMEOUT
 AI_MAX_RETRIES = env.AI_MAX_RETRIES
+AI_SEARCH_DOMAIN_BLACKLIST = [
+    domain.strip().lower()
+    for domain in env.AI_SEARCH_DOMAIN_BLACKLIST.split(",")
+    if domain.strip()
+]
 
 # -----------------------------------------------------------------------------
 # AI API 인증 설정 (전역 변수로 노출)

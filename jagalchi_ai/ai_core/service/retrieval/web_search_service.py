@@ -9,6 +9,13 @@ from typing import Any, Dict, List, Optional
 from jagalchi_ai.ai_core.client import ApifySearchClient
 from jagalchi_ai.ai_core.common.hashing import stable_hash_json
 from jagalchi_ai.ai_core.repository.snapshot_store import SnapshotStore
+from jagalchi_ai.ai_core.service.retrieval.search_quality import (
+    SearchLang,
+    apply_result_quality,
+    canonicalize_url,
+    get_domain_blacklist,
+    normalize_search_lang,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +30,7 @@ class SearchEngine(str, Enum):
 class WebSearchService:
     DEFAULT_TOP_K = 5
     DEFAULT_RECENCY_DAYS = 30
-    CACHE_VERSION = "web_search_v5_apify"
+    CACHE_VERSION = "web_search_v6_quality"
 
     def __init__(
         self,
@@ -60,7 +67,9 @@ class WebSearchService:
         engine: SearchEngine = SearchEngine.ALL,
         use_cache: bool = True,
         recency_days: Optional[int] = DEFAULT_RECENCY_DAYS,
+        lang: str | SearchLang | None = SearchLang.KO_FIRST,
     ) -> List[Dict[str, Any]]:
+        lang_mode = normalize_search_lang(lang)
         engines = self._get_engines_to_use(engine)
         if not engines:
             return []
@@ -70,17 +79,23 @@ class WebSearchService:
             "top_k": top_k,
             "engines": engines,
             "recency_days": recency_days,
+            "lang": lang_mode.value,
         })
         if use_cache:
             snapshot = self._snapshot_store.get_or_create(
                 cache_key,
                 version=self.CACHE_VERSION,
-                builder=lambda: self._fetch(query, top_k, engines, recency_days),
-                metadata={"query": query, "engines": engines, "recency_days": recency_days},
+                builder=lambda: self._fetch(query, top_k, engines, recency_days, lang_mode),
+                metadata={
+                    "query": query,
+                    "engines": engines,
+                    "recency_days": recency_days,
+                    "lang": lang_mode.value,
+                },
             )
             return snapshot.payload.get("results", [])
 
-        return self._fetch(query, top_k, engines, recency_days).get("results", [])
+        return self._fetch(query, top_k, engines, recency_days, lang_mode).get("results", [])
 
     def search_with_metadata(
         self,
@@ -89,24 +104,32 @@ class WebSearchService:
         engine: SearchEngine = SearchEngine.ALL,
         use_cache: bool = True,
         recency_days: Optional[int] = DEFAULT_RECENCY_DAYS,
+        lang: str | SearchLang | None = SearchLang.KO_FIRST,
     ) -> Dict[str, Any]:
+        lang_mode = normalize_search_lang(lang)
         engines = self._get_engines_to_use(engine)
         cache_key = stable_hash_json({
             "query": query,
             "top_k": top_k,
             "engines": engines,
             "recency_days": recency_days,
+            "lang": lang_mode.value,
             "metadata": True,
         })
         if use_cache:
             snapshot = self._snapshot_store.get_or_create(
                 cache_key,
                 version=self.CACHE_VERSION,
-                builder=lambda: self._fetch(query, top_k, engines, recency_days),
-                metadata={"query": query, "engines": engines, "recency_days": recency_days},
+                builder=lambda: self._fetch(query, top_k, engines, recency_days, lang_mode),
+                metadata={
+                    "query": query,
+                    "engines": engines,
+                    "recency_days": recency_days,
+                    "lang": lang_mode.value,
+                },
             )
             return snapshot.payload
-        return self._fetch(query, top_k, engines, recency_days)
+        return self._fetch(query, top_k, engines, recency_days, lang_mode)
 
     def _get_engines_to_use(self, engine: SearchEngine) -> List[str]:
         if not self.is_available:
@@ -116,7 +139,14 @@ class WebSearchService:
             return ["apify"]
         return []
 
-    def _fetch(self, query: str, top_k: int, engines: List[str], recency_days: Optional[int]) -> Dict[str, Any]:
+    def _fetch(
+        self,
+        query: str,
+        top_k: int,
+        engines: List[str],
+        recency_days: Optional[int],
+        lang: SearchLang,
+    ) -> Dict[str, Any]:
         if not engines:
             return {
                 "query": query,
@@ -128,7 +158,19 @@ class WebSearchService:
 
         results: List[Dict[str, Any]] = []
         if "apify" in engines and self._apify.available:
-            for item in self._apify.search(query=query, max_results=top_k):
+            max_results = max(top_k * 3, top_k)
+            country_code = "kr"
+            language_code = "ko"
+            if lang == SearchLang.GLOBAL:
+                # global은 기존 동작 유지(언어 필터링/가점 미적용)만 보장한다.
+                country_code = "kr"
+                language_code = "ko"
+            for item in self._apify.search(
+                query=query,
+                max_results=max_results,
+                country_code=country_code,
+                language_code=language_code,
+            ):
                 results.append({
                     "title": item.title,
                     "url": item.url,
@@ -138,14 +180,22 @@ class WebSearchService:
                     "source": "apify",
                 })
 
-        deduped = _dedupe_results(results)
+        ranked = apply_result_quality(
+            results,
+            query=query,
+            top_k=top_k,
+            lang=lang,
+            snippet_fields=("content",),
+            domain_blacklist=get_domain_blacklist(),
+        )
         return {
             "query": query,
-            "results": deduped[:top_k],
+            "results": ranked[:top_k],
             "generated_at": datetime.utcnow().isoformat(),
             "engines_used": ["apify"] if results else [],
             "total_results_before_dedup": len(results),
             "recency_days": recency_days,
+            "lang": lang.value,
         }
 
     def health_check(self) -> Dict[str, Any]:
@@ -154,19 +204,21 @@ class WebSearchService:
             "engines": {"apify": self._apify.available},
             "cache_version": self.CACHE_VERSION,
             "actor": self._apify.actor,
+            "domain_blacklist": get_domain_blacklist(),
         }
 
 
 def _dedupe_results(results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     seen: Dict[str, Dict[str, Any]] = {}
     for item in results:
-        url = str(item.get("url") or "").strip().lower()
-        if not url:
+        url = str(item.get("url") or "").strip()
+        canonical = canonicalize_url(url)
+        if not canonical:
             continue
         score = float(item.get("score") or 0.0)
-        existing = seen.get(url)
+        existing = seen.get(canonical)
         if existing is None or score > float(existing.get("score") or 0.0):
-            seen[url] = item
+            seen[canonical] = item
     merged = list(seen.values())
     merged.sort(key=lambda x: float(x.get("score") or 0.0), reverse=True)
     return merged

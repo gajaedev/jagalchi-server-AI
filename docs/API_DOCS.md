@@ -338,26 +338,53 @@ GET /api/ai/graph-rag?question=React%20상태관리
 
 ### 13. Resource Recommendation API
 ```bash
-GET /api/ai/resource-recommendation?query=Python%20튜토리얼&top_k=3
+GET /api/ai/resource-recommendation?query=Python%20튜토리얼&top_k=3&lang=ko_first
 ```
-**응답:** Tavily 검색을 통해 Python 학습 자료 추천
+**쿼리 파라미터:**
+- `lang`: `ko_only` | `ko_first` | `global` (기본값 `ko_first`)
+
+**응답:** 로컬+웹 검색 기반 학습 자료 추천 (`why_recommended`, `difficulty`, `estimated_minutes` 포함)
 
 ---
 
-### 14. Web Search API (Tavily/Exa)
+### 14. Web Search API (Apify, Tavily/Exa Alias)
 ```bash
-GET /api/ai/web-search?query=Django%20tutorial&top_k=3
+GET /api/ai/web-search?query=Django%20tutorial&top_k=3&lang=ko_first
 ```
+**쿼리 파라미터:**
+- `lang`: `ko_only` | `ko_first` | `global` (기본값 `ko_first`)
+
 **응답:**
 ```json
 {
     "query": "Django tutorial",
     "results": [
-        {"title": "Django Girls Tutorial", "url": "https://tutorial.djangogirls.org/en/", "score": 0.9998},
-        {"title": "Getting started with Django", "url": "https://www.djangoproject.com/start/", "score": 0.9998},
-        {"title": "Writing your first Django app", "url": "https://docs.djangoproject.com/en/6.0/intro/tutorial01/", "score": 0.9997}
+        {
+            "title": "Django Girls Tutorial",
+            "url": "https://tutorial.djangogirls.org/en/",
+            "score": 0.9998,
+            "why_recommended": "주제 관련 자료",
+            "difficulty": "beginner",
+            "estimated_minutes": 15
+        },
+        {
+            "title": "Getting started with Django",
+            "url": "https://www.djangoproject.com/start/",
+            "score": 0.9998,
+            "why_recommended": "공식 문서",
+            "difficulty": "beginner",
+            "estimated_minutes": 15
+        },
+        {
+            "title": "Writing your first Django app",
+            "url": "https://docs.djangoproject.com/en/6.0/intro/tutorial01/",
+            "score": 0.9997,
+            "why_recommended": "공식 문서",
+            "difficulty": "beginner",
+            "estimated_minutes": 25
+        }
     ],
-    "engines_used": ["tavily", "exa"],
+    "engines_used": ["apify"],
     "total_results": 3
 }
 ```
@@ -424,7 +451,7 @@ GET /api/ai/demo
 | **LearningCoachService** | `learning_coach.py` | ReAct 패턴, 의도 분류, 시맨틱 캐싱 |
 | **BehaviorModel** | `behavior_model.py` | Fogg B=MAP 모델 (Motivation, Ability, Prompt) |
 | **SimpleWorkflow** | `simple_workflow.py` | LangGraph 스타일 상태 관리 워크플로우 |
-| **WebSearchService** | `web_search_service.py` | Tavily/Exa 통합 검색 |
+| **WebSearchService** | `web_search_service.py` | Apify 기반 웹 검색 + 한국어 우선 랭킹 |
 | **GraphRAGService** | `graph_rag.py` | 지식 그래프 기반 RAG |
 
 ### 외부 API 클라이언트
@@ -444,6 +471,7 @@ GET /api/ai/demo
 GEMINI_API_KEY=your_gemini_api_key
 TAVILY_API_KEY=your_tavily_api_key
 EXA_API_KEY=your_exa_api_key
+AI_SEARCH_DOMAIN_BLACKLIST=blocked-domain.com,another-blocked.com
 ```
 
 ## 🐳 Docker 실행

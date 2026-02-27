@@ -420,7 +420,7 @@ class ResourceRecommendationAPIView(APIView):
             "학습 자료를 추천합니다. 캐시는 쿼리/recency_days 기준으로 저장되며 "
             "응답은 items 배열과 retrieval_evidence를 포함합니다.\n\n"
             "응답 필드 요약:\n"
-            "- items: title/url/source/score 목록\n"
+            "- items: title/url/source/score + why_recommended/difficulty/estimated_minutes\n"
             "- retrieval_evidence: 근거 스니펫 목록\n"
             "- model_version, generated_at: 스냅샷 메타데이터\n\n"
             "프론트 사용 팁:\n"
@@ -435,23 +435,31 @@ class ResourceRecommendationAPIView(APIView):
                 required=False,
                 description="최신 자료 기준 기간(일). 기본 30, 0/미지정은 제한 없음",
             ),
+            OpenApiParameter(
+                "lang",
+                OpenApiTypes.STR,
+                required=False,
+                description="검색 언어 모드 (기본: ko_first)",
+                enum=["ko_only", "ko_first", "global"],
+            ),
         ],
         responses=ResourceRecommendationSerializer,
     )
     def get(self, request) -> Response:
         """
-        @param request DRF 요청 객체 (query/top_k/recency_days 사용).
+        @param request DRF 요청 객체 (query/top_k/recency_days/lang 사용).
         @returns 자료 추천 결과 JSON.
         """
         query = request.GET.get("query") or "React useEffect 에러 해결 방법"
         top_k = int(request.GET.get("top_k") or 3)
+        lang = request.GET.get("lang") or "ko_first"
         recency_days_param = request.GET.get("recency_days")
         recency_days = (
             int(recency_days_param)
             if recency_days_param is not None
             else ResourceRecommendationService.DEFAULT_RECENCY_DAYS
         )
-        payload = _resource_recommendation(query, top_k, recency_days)
+        payload = _resource_recommendation(query, top_k, recency_days, lang=lang)
         return _serialize(ResourceRecommendationSerializer, payload)
 
 
@@ -740,14 +748,20 @@ def _comment_insights(roadmap_id: str, question: str):
     return digest, duplicates
 
 
-def _resource_recommendation(query: str, top_k: int, recency_days: int | None):
+def _resource_recommendation(
+    query: str,
+    top_k: int,
+    recency_days: int | None,
+    lang: str = "ko_first",
+):
     """
     @param query 검색 질의.
     @param top_k 추천 개수.
     @param recency_days 최신 자료 필터 기간(일).
+    @param lang 검색 언어 모드.
     @returns 자료 추천 JSON.
     """
-    return ResourceRecommendationService().recommend(query, top_k=top_k, recency_days=recency_days)
+    return ResourceRecommendationService().recommend(query, top_k=top_k, recency_days=recency_days, lang=lang)
 
 
 def _learning_pattern(user_id: str):
@@ -831,7 +845,7 @@ class WebSearchAPIView(APIView):
             "기본적으로 최근 N일(기본 30일) 내 문서를 우선하며, 엔진 선택과 기간 필터를 "
             "파라미터로 제어할 수 있습니다.\n\n"
             "응답 필드 요약:\n"
-            "- results: title/url/content/score/source/fetched_at\n"
+            "- results: title/url/content/score/source/fetched_at + why_recommended/difficulty/estimated_minutes\n"
             "- engines_used: 실제 사용된 엔진 목록\n"
             "- generated_at: 스냅샷 생성 시각\n\n"
             "프론트 사용 팁:\n"
@@ -864,6 +878,13 @@ class WebSearchAPIView(APIView):
                 required=False,
                 description="최신 자료 기준 기간(일). 기본 30, 0/미지정은 제한 없음",
             ),
+            OpenApiParameter(
+                "lang",
+                OpenApiTypes.STR,
+                required=False,
+                description="검색 언어 모드 (기본: ko_first)",
+                enum=["ko_only", "ko_first", "global"],
+            ),
         ],
         responses={200: WebSearchSerializer},
     )
@@ -871,18 +892,20 @@ class WebSearchAPIView(APIView):
         """
         웹 검색 요청을 처리하고 구조화된 검색 결과를 반환합니다.
 
-        @param {Request} request - DRF 요청 객체 (query/top_k/engine/recency_days 파라미터 포함).
+        @param {Request} request - DRF 요청 객체 (query/top_k/engine/recency_days/lang 파라미터 포함).
         @returns {Response} 검색 결과를 담은 직렬화된 응답.
         """
         from jagalchi_ai.ai_core.service.retrieval.web_search_service import (
             WebSearchService,
             SearchEngine,
+            SearchLang,
         )
 
         query = request.GET.get("query", "Python 학습 자료")
         top_k = min(int(request.GET.get("top_k") or 5), 20)
         engine_param = request.GET.get("engine", "all")
         recency_days_param = request.GET.get("recency_days")
+        lang_param = request.GET.get("lang", "ko_first")
 
         # 검색 엔진 선택
         engine_map = {
@@ -895,7 +918,17 @@ class WebSearchAPIView(APIView):
 
         # 검색 수행
         service = WebSearchService()
-        search_kwargs = {"query": query, "top_k": top_k, "engine": engine}
+        lang_map = {
+            "ko_only": SearchLang.KO_ONLY,
+            "ko_first": SearchLang.KO_FIRST,
+            "global": SearchLang.GLOBAL,
+        }
+        search_kwargs = {
+            "query": query,
+            "top_k": top_k,
+            "engine": engine,
+            "lang": lang_map.get(lang_param, SearchLang.KO_FIRST),
+        }
         if recency_days_param is not None:
             search_kwargs["recency_days"] = int(recency_days_param)
         result = service.search_with_metadata(**search_kwargs)
