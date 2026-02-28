@@ -35,6 +35,7 @@ from jagalchi_ai.ai_core.controller.serializers import (
     InitDataUpdateSerializer,
     LearningCoachSerializer,
     LearningPatternSerializer,
+    N8nSmokeTestSerializer,
     NodeDescriptionSerializer,
     NodeResourceCreateSerializer,
     NodeResourceSerializer,
@@ -1329,3 +1330,26 @@ class NodeResourceSaveAPIView(APIView):
             result = service.save_resource_to_node(**serializer.validated_data)
             return Response(_serialize(NodeResourceSerializer, result).data, status=201)
         return Response(serializer.errors, status=400)
+
+
+# =============================================================================
+# n8n 통합 연동 테스트 API
+# =============================================================================
+
+class N8nIntegrationSmokeTestAPIView(APIView):
+    """
+    n8n 통합 연동 확인을 위한 스모크 테스트 엔드포인트.
+    """
+
+    @extend_schema(
+        summary="n8n 통합 스모크 테스트",
+        description="n8n 워크플로우에서 호출하여 Jagalchi AI 서버와의 연동 상태를 확인합니다.",
+        tags=["integration"],
+        responses={200: N8nSmokeTestSerializer},
+    )
+    def get(self, request) -> Response:
+        """
+        단순 상태 응답을 반환합니다.
+        @returns {"status": "ok"}
+        """
+        return _serialize(N8nSmokeTestSerializer, {"status": "ok"})

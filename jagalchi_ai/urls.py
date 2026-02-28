@@ -27,6 +27,7 @@ from jagalchi_ai.ai_core.controller.ai_views import (
     NodeGenerationFromInitAPIView,
     NodeResourceRecommendationAPIView,
     NodeResourceSaveAPIView,
+    N8nIntegrationSmokeTestAPIView,
 )
 
 urlpatterns = [
@@ -76,4 +77,7 @@ urlpatterns = [
     path("ai/node-description", NodeDescriptionAPIView.as_view()),
     path("ai/node-resource-recommendation", NodeResourceRecommendationAPIView.as_view()),
     path("ai/node-resource-save", NodeResourceSaveAPIView.as_view()),
+
+    # n8n 통합 연동 테스트 API
+    path("ai/integration/smoke-test", N8nIntegrationSmokeTestAPIView.as_view(), name="n8n-smoke-test"),
 ]

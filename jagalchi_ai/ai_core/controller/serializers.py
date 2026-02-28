@@ -404,3 +404,11 @@ class NodeDescriptionSerializer(serializers.Serializer):
     description = serializers.CharField()
     generated_at = serializers.DateTimeField()
 
+
+# =============================================================================
+# n8n 통합용 시리얼라이저
+# =============================================================================
+
+class N8nSmokeTestSerializer(serializers.Serializer):
+    """n8n 통합 스모크 테스트 응답 시리얼라이저."""
+    status = serializers.CharField(help_text="통합 상태 (ok)")
