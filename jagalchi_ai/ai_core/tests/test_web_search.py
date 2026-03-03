@@ -1,4 +1,5 @@
 import unittest
+from typing import Any
 
 from jagalchi_ai.ai_core.client import ExaResult, TavilyResult
 from jagalchi_ai.ai_core.repository.snapshot_store import SnapshotStore
@@ -14,6 +15,7 @@ class FakeTavilyClient:
         """
         self.calls = 0
 
+    @property
     def available(self) -> bool:
         """
         테스트 환경에서 사용 가능 여부를 반환합니다.
@@ -22,13 +24,14 @@ class FakeTavilyClient:
         """
         return True
 
-    def search(self, query: str, max_results: int = 5, include_raw_content: bool = False) -> list[TavilyResult]:
+    def search(self, query: str, max_results: int = 5, include_raw_content: bool = False, **kwargs) -> list[TavilyResult]:
         """
         테스트용 고정 검색 결과를 반환합니다.
 
         @param {str} query - 검색 쿼리.
         @param {int} max_results - 최대 결과 수.
         @param {bool} include_raw_content - 본문 포함 여부.
+        @param {dict} kwargs - 추가 인자 (days 등).
         @returns {list[TavilyResult]} 고정된 검색 결과.
         """
         self.calls += 1
@@ -44,6 +47,7 @@ class FakeTavilyClient:
 
 
 class DisabledTavilyClient:
+    @property
     def available(self) -> bool:
         """
         비활성 클라이언트 상태를 반환합니다.
@@ -52,13 +56,14 @@ class DisabledTavilyClient:
         """
         return False
 
-    def search(self, query: str, max_results: int = 5, include_raw_content: bool = False) -> list[TavilyResult]:
+    def search(self, query: str, max_results: int = 5, include_raw_content: bool = False, **kwargs) -> list[TavilyResult]:
         """
         호출되면 안 되는 검색 메서드입니다.
 
         @param {str} query - 검색 쿼리.
         @param {int} max_results - 최대 결과 수.
         @param {bool} include_raw_content - 본문 포함 여부.
+        @param {dict} kwargs - 추가 인자.
         @returns {list[TavilyResult]} 테스트 실패를 유발합니다.
         """
         raise AssertionError("검색이 호출되면 안 됩니다.")
@@ -100,6 +105,16 @@ class FakeExaClient:
             )
         ]
 
+    def search_with_options(self, query: str, options: Any) -> list[ExaResult]:
+        """
+        옵션을 포함한 테스트용 검색 결과를 반환합니다.
+
+        @param {str} query - 검색 쿼리.
+        @param {Any} options - 검색 옵션.
+        @returns {list[ExaResult]} 고정된 검색 결과.
+        """
+        return self.search(query, max_results=getattr(options, "num_results", 5))
+
 
 class DisabledExaClient:
     def available(self) -> bool:
@@ -120,6 +135,12 @@ class DisabledExaClient:
         """
         raise AssertionError("검색이 호출되면 안 됩니다.")
 
+    def search_with_options(self, query: str, options: Any) -> list[ExaResult]:
+        """
+        호출되면 안 되는 검색 메서드입니다.
+        """
+        raise AssertionError("검색이 호출되면 안 됩니다.")
+
 
 class WebSearchTests(unittest.TestCase):
     def test_web_search_cache_hit(self) -> None:
@@ -137,6 +158,7 @@ class WebSearchTests(unittest.TestCase):
         self.assertEqual(tavily.calls, 1)
         self.assertEqual(exa.calls, 1)
         self.assertEqual(first, second)
+        # Exa 결과가 Tavily보다 점수가 높으므로 (0.95 vs 0.91) Exa가 첫 번째
         self.assertEqual(first[0]["source"], "exa")
         self.assertEqual(store.hits, 1)
 
