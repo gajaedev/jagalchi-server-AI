@@ -68,12 +68,12 @@ urlpatterns = [
     path("ai/graph-rag", GraphRAGAPIView.as_view()),
 
     # Init Data API
-    path("ai/init-data", InitDataListCreateAPIView.as_view()),
-    path("ai/init-data/<str:init_data_id>", InitDataDetailAPIView.as_view()),
+    path("ai/init-data", InitDataListCreateAPIView.as_view(), name="init-data-list-create"),
+    path("ai/init-data/<str:init_data_id>", InitDataDetailAPIView.as_view(), name="init-data-detail"),
 
     # Node Content API
-    path("ai/node-generation", NodeGenerationFromInitAPIView.as_view()),
-    path("ai/node-description", NodeDescriptionAPIView.as_view()),
-    path("ai/node-resource-recommendation", NodeResourceRecommendationAPIView.as_view()),
-    path("ai/node-resource-save", NodeResourceSaveAPIView.as_view()),
+    path("ai/node-generation", NodeGenerationFromInitAPIView.as_view(), name="node-generation"),
+    path("ai/node-description", NodeDescriptionAPIView.as_view(), name="node-description"),
+    path("ai/node-resource-recommendation", NodeResourceRecommendationAPIView.as_view(), name="node-resource-recommendation"),
+    path("ai/node-resource-save", NodeResourceSaveAPIView.as_view(), name="node-resource-save"),
 ]
