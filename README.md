@@ -30,6 +30,8 @@ python manage.py issue_ai_token \
 ```
 
 ## 로컬 실행(선택)
+> 권장 Python: **3.10 ~ 3.12** (3.14에서는 일부 LangChain/Pydantic 의존성 충돌 가능)
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate
@@ -45,27 +47,27 @@ docker compose up --build
 ## 데모 엔드포인트
 ```bash
 curl -H "Authorization: Bearer $AI_AUTH_DEV_TOKEN_EDIT" \
-  "http://localhost:8000/api/ai/demo?roadmap_id=rm_frontend&tech_slug=react&user_id=user-1"
+  "http://localhost:8000/ai/demo?roadmap_id=rm_frontend&tech_slug=react&user_id=user-1"
 ```
 
 ## 개별 엔드포인트
-- `GET /api/ai/record-coach`
-- `GET /api/ai/related-roadmaps`
-- `GET /api/ai/tech-cards`
-- `GET /api/ai/tech-fingerprint`
-- `GET /api/ai/comment-digest`
-- `GET /api/ai/comment-duplicates`
-- `GET /api/ai/resource-recommendation`
-- `GET /api/ai/learning-pattern`
-- `GET /api/ai/graph-rag`
-- `GET /api/ai/roadmap-generated`
-- `GET /api/ai/learning-coach`
-- `GET /api/ai/roadmap-recommendation`
+- `GET /ai/record-coach`
+- `GET /ai/related-roadmaps`
+- `GET /ai/tech-cards`
+- `GET /ai/tech-fingerprint`
+- `GET /ai/comment-digest`
+- `GET /ai/comment-duplicates`
+- `GET /ai/resource-recommendation`
+- `GET /ai/learning-pattern`
+- `GET /ai/graph-rag`
+- `GET /ai/roadmap-generated`
+- `GET /ai/learning-coach`
+- `GET /ai/roadmap-recommendation`
 
 ## Swagger 문서
-- OpenAPI JSON: `http://localhost:8000/api/schema/`
-- Swagger UI: `http://localhost:8000/api/docs/`
-- Redoc: `http://localhost:8000/api/redoc/`
+- OpenAPI JSON: `http://localhost:8000/ai/schema/`
+- Swagger UI: `http://localhost:8000/ai/docs/`
+- Redoc: `http://localhost:8000/ai/redoc/`
 
 ## Gemini 연결 확인(선택)
 ```bash

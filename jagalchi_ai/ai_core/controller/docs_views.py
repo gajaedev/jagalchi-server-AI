@@ -1,7 +1,17 @@
 from __future__ import annotations
 
 from drf_spectacular.utils import OpenApiTypes, extend_schema
-from drf_spectacular.views import SpectacularRedocView, SpectacularSwaggerView
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
+)
+from rest_framework.permissions import AllowAny
+
+
+class PublicSchemaAPIView(SpectacularAPIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
 
 
 class SwaggerUIView(SpectacularSwaggerView):
@@ -10,6 +20,9 @@ class SwaggerUIView(SpectacularSwaggerView):
 
     Swagger 화면을 OpenAPI 스키마에 노출하기 위해 APIView로 감싼다.
     """
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
 
     @extend_schema(
         summary="Swagger UI",
@@ -32,6 +45,9 @@ class RedocUIView(SpectacularRedocView):
 
     Redoc 화면을 OpenAPI 스키마에 노출하기 위해 APIView로 감싼다.
     """
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
 
     @extend_schema(
         summary="Redoc UI",

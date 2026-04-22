@@ -1,0 +1,45 @@
+# Production dependency set for the deployed AI service.
+# Excludes local-only tooling and large unused packages that are not imported
+# during application startup in this repository.
+
+Django>=4.2,<5.0
+djangorestframework>=3.15,<4.0
+drf-spectacular>=0.27.2
+
+gunicorn>=22.0.0
+uvicorn[standard]>=0.30.0
+whitenoise>=6.7.0
+
+google-genai>=1.0.0
+tavily-python>=0.5.0
+exa-py>=1.8.0
+
+langchain>=0.3.0,<0.4
+langchain-community>=0.3.0,<0.4
+langchain-text-splitters>=0.3.0
+
+faiss-cpu>=1.8.0
+
+numpy>=1.26,<2.0
+scikit-learn>=1.5.0
+networkx>=3.3
+rank-bm25>=0.2.2
+
+pydantic>=2.8.0
+pydantic-settings>=2.4.0
+
+structlog>=24.4.0
+python-json-logger>=2.0.7
+
+httpx>=0.27.0
+tenacity>=9.0.0
+aiohttp>=3.10.0
+
+python-dotenv>=1.0.1
+orjson>=3.10.0
+cachetools>=5.5.0
+python-dateutil>=2.9.0
+
+django-cors-headers>=4.4.0
+PyJWT>=2.9.0,<3.0
+mysqlclient>=2.2.0

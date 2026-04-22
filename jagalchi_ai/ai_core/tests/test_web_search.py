@@ -1,44 +1,26 @@
 import unittest
 
-from jagalchi_ai.ai_core.client import ExaResult, TavilyResult
+from django.test import override_settings
+
 from jagalchi_ai.ai_core.repository.snapshot_store import SnapshotStore
-from jagalchi_ai.ai_core.service.retrieval.web_search_service import WebSearchService
+from jagalchi_ai.ai_core.service.retrieval.web_search_service import SearchEngine, SearchLang, WebSearchService
 
 
-class FakeTavilyClient:
-    def __init__(self) -> None:
-        """
-        테스트용 Tavily 클라이언트를 초기화합니다.
+class FakeApifyResult:
+    def __init__(self, title: str, url: str, content: str, score: float, published_date: str) -> None:
+        self.title = title
+        self.url = url
+        self.content = content
+        self.score = score
+        self.published_date = published_date
 
-        @returns {None} 호출 카운트를 초기화합니다.
-        """
+
+class FakeApifyClient:
+    def __init__(self, results: list[FakeApifyResult] | None = None) -> None:
         self.calls = 0
-
-    @property
-    def available(self) -> bool:
-        """
-        WebSearchService는 `client.available`(bool)을 확인합니다.
-        """
-        return True
-
-    def search(
-        self,
-        query: str,
-        max_results: int = 5,
-        days: int | None = None,
-        include_raw_content: bool = False,
-    ) -> list[TavilyResult]:
-        """
-        테스트용 고정 검색 결과를 반환합니다.
-
-        @param {str} query - 검색 쿼리.
-        @param {int} max_results - 최대 결과 수.
-        @param {bool} include_raw_content - 본문 포함 여부.
-        @returns {list[TavilyResult]} 고정된 검색 결과.
-        """
-        self.calls += 1
-        return [
-            TavilyResult(
+        self.actor = "apify/google-search-scraper"
+        self._results = results or [
+            FakeApifyResult(
                 title="React Docs",
                 url="https://react.dev",
                 content="React 공식 문서 요약",
@@ -47,127 +29,155 @@ class FakeTavilyClient:
             )
         ]
 
+    @property
+    def available(self) -> bool:
+        return True
 
-class DisabledTavilyClient:
+    def search(self, query: str, max_results: int = 5, country_code: str = "KR", language_code: str = "ko"):
+        self.calls += 1
+        return self._results[:max_results]
+
+
+class DisabledApifyClient:
+    actor = "apify/google-search-scraper"
+
     @property
     def available(self) -> bool:
         return False
 
-    def search(
-        self,
-        query: str,
-        max_results: int = 5,
-        days: int | None = None,
-        include_raw_content: bool = False,
-    ) -> list[TavilyResult]:
-        """
-        호출되면 안 되는 검색 메서드입니다.
-
-        @param {str} query - 검색 쿼리.
-        @param {int} max_results - 최대 결과 수.
-        @param {bool} include_raw_content - 본문 포함 여부.
-        @returns {list[TavilyResult]} 테스트 실패를 유발합니다.
-        """
-        raise AssertionError("검색이 호출되면 안 됩니다.")
-
-
-class FakeExaClient:
-    def __init__(self) -> None:
-        """
-        테스트용 Exa 클라이언트를 초기화합니다.
-
-        @returns {None} 호출 카운트를 초기화합니다.
-        """
-        self.calls = 0
-
-    def available(self) -> bool:
-        """
-        테스트 환경에서 사용 가능 여부를 반환합니다.
-
-        @returns {bool} 항상 True.
-        """
-        return True
-
-    def search_with_options(self, query: str, options) -> list[ExaResult]:
-        """
-        WebSearchService는 recency 필터가 있을 때 search_with_options를 사용합니다.
-        """
-        return self.search(query, max_results=getattr(options, "num_results", 5))
-
-    def search(self, query: str, max_results: int = 5) -> list[ExaResult]:
-        """
-        테스트용 고정 검색 결과를 반환합니다.
-
-        @param {str} query - 검색 쿼리.
-        @param {int} max_results - 최대 결과 수.
-        @returns {list[ExaResult]} 고정된 검색 결과.
-        """
-        self.calls += 1
-        return [
-            ExaResult(
-                title="React Docs",
-                url="https://react.dev",
-                content="React Exa 요약",
-                score=0.95,
-                published_date="2025-01-02",
-            )
-        ]
-
-
-class DisabledExaClient:
-    def available(self) -> bool:
-        """
-        비활성 클라이언트 상태를 반환합니다.
-
-        @returns {bool} 항상 False.
-        """
-        return False
-
-    def search_with_options(self, query: str, options) -> list[ExaResult]:
-        raise AssertionError("검색이 호출되면 안 됩니다.")
-
-    def search(self, query: str, max_results: int = 5) -> list[ExaResult]:
-        """
-        호출되면 안 되는 검색 메서드입니다.
-
-        @param {str} query - 검색 쿼리.
-        @param {int} max_results - 최대 결과 수.
-        @returns {list[ExaResult]} 테스트 실패를 유발합니다.
-        """
+    def search(self, *args, **kwargs):
         raise AssertionError("검색이 호출되면 안 됩니다.")
 
 
 class WebSearchTests(unittest.TestCase):
     def test_web_search_cache_hit(self) -> None:
-        """
-        캐시 히트 시 외부 호출이 중복되지 않는지 검증합니다.
-
-        @returns {None} 테스트만 수행합니다.
-        """
         store = SnapshotStore()
-        tavily = FakeTavilyClient()
-        exa = FakeExaClient()
-        service = WebSearchService(tavily_client=tavily, exa_client=exa, snapshot_store=store)
+        apify = FakeApifyClient()
+        service = WebSearchService(apify_client=apify, snapshot_store=store)
+
         first = service.search("react docs", top_k=1)
         second = service.search("react docs", top_k=1)
-        self.assertEqual(tavily.calls, 1)
-        self.assertEqual(exa.calls, 1)
+
+        self.assertEqual(apify.calls, 1)
         self.assertEqual(first, second)
-        self.assertEqual(first[0]["source"], "exa")
+        self.assertEqual(first[0]["source"], "apify")
         self.assertEqual(store.hits, 1)
 
     def test_web_search_unavailable(self) -> None:
-        """
-        모든 외부 검색이 비활성일 때 빈 결과를 반환하는지 확인합니다.
-
-        @returns {None} 테스트만 수행합니다.
-        """
-        service = WebSearchService(
-            tavily_client=DisabledTavilyClient(),
-            exa_client=DisabledExaClient(),
-        )
-        results = service.search("react docs", top_k=1)
+        service = WebSearchService(apify_client=DisabledApifyClient())
+        results = service.search("react docs", top_k=1, engine=SearchEngine.APIFY)
         self.assertEqual(results, [])
+
+    def test_lang_ko_only_filters_non_korean_results(self) -> None:
+        apify = FakeApifyClient(
+            results=[
+                FakeApifyResult(
+                    title="Python async tutorial",
+                    url="https://example.com/python-async",
+                    content="Beginner async article",
+                    score=0.95,
+                    published_date="2025-01-01",
+                ),
+                FakeApifyResult(
+                    title="파이썬 비동기 튜토리얼",
+                    url="https://velog.io/@dev/python-async",
+                    content="한글로 설명한 입문 자료",
+                    score=0.62,
+                    published_date="2025-01-01",
+                ),
+                FakeApifyResult(
+                    title="장고 ORM 성능 최적화",
+                    url="https://myblog.tistory.com/42",
+                    content="실전 최적화 사례 정리",
+                    score=0.54,
+                    published_date="2025-01-01",
+                ),
+            ]
+        )
+        service = WebSearchService(apify_client=apify, snapshot_store=SnapshotStore())
+        results = service.search(
+            "python async tutorial",
+            top_k=5,
+            use_cache=False,
+            lang=SearchLang.KO_ONLY,
+        )
+        self.assertEqual(len(results), 2)
+        self.assertTrue(all("example.com" not in item["url"] for item in results))
+
+    def test_domain_boost_ordering_in_ko_first(self) -> None:
+        apify = FakeApifyClient(
+            results=[
+                FakeApifyResult(
+                    title="Python async tutorial",
+                    url="https://random.dev/async",
+                    content="Good overview tutorial",
+                    score=0.83,
+                    published_date="2025-01-01",
+                ),
+                FakeApifyResult(
+                    title="Python asyncio docs",
+                    url="https://docs.python.org/3/library/asyncio.html",
+                    content="Official guide",
+                    score=0.72,
+                    published_date="2025-01-01",
+                ),
+                FakeApifyResult(
+                    title="파이썬 비동기 입문",
+                    url="https://velog.io/@mentor/async",
+                    content="한글 입문 자료",
+                    score=0.6,
+                    published_date="2025-01-01",
+                ),
+            ]
+        )
+        service = WebSearchService(apify_client=apify, snapshot_store=SnapshotStore())
+        results = service.search(
+            "python async tutorial",
+            top_k=3,
+            use_cache=False,
+            lang=SearchLang.KO_FIRST,
+        )
+        self.assertEqual(len(results), 3)
+        self.assertIn("velog.io", results[0]["url"])
+        self.assertIn("docs.python.org", results[1]["url"])
+
+    @override_settings(AI_SEARCH_DOMAIN_BLACKLIST=["blocked.com"])
+    def test_blacklist_excludes_domain(self) -> None:
+        apify = FakeApifyClient(
+            results=[
+                FakeApifyResult(
+                    title="Blocked result",
+                    url="https://blocked.com/python",
+                    content="길이가 충분한 설명 텍스트입니다.",
+                    score=0.95,
+                    published_date="2025-01-01",
+                ),
+                FakeApifyResult(
+                    title="React docs",
+                    url="https://react.dev/learn",
+                    content="Official React documentation",
+                    score=0.5,
+                    published_date="2025-01-01",
+                ),
+            ]
+        )
+        service = WebSearchService(apify_client=apify, snapshot_store=SnapshotStore())
+        results = service.search(
+            "react tutorial",
+            top_k=5,
+            use_cache=False,
+            lang=SearchLang.GLOBAL,
+        )
+        urls = [item["url"] for item in results]
+        self.assertTrue(all("blocked.com" not in url for url in urls))
+        self.assertTrue(any("react.dev" in url for url in urls))
+
+    def test_results_include_quality_fields(self) -> None:
+        service = WebSearchService(apify_client=FakeApifyClient(), snapshot_store=SnapshotStore())
+        results = service.search("react docs", top_k=1, use_cache=False)
+        self.assertIn("why_recommended", results[0])
+        self.assertIn("difficulty", results[0])
+        self.assertIn("estimated_minutes", results[0])
 
 
 if __name__ == "__main__":
