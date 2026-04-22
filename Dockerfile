@@ -49,6 +49,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     build-essential \
     curl \
+    pkg-config \
+    default-libmysqlclient-dev \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -57,8 +59,8 @@ RUN python -m pip install --upgrade pip setuptools wheel
 
 # 의존성 먼저 설치 (Docker 캐시 최적화)
 # 소스 코드 변경 시 의존성 재설치 방지
-COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt requirements-prod.txt /app/
+RUN pip install --no-cache-dir -r requirements-prod.txt
 
 # -----------------------------------------------------------------------------
 # 3단계: 개발 이미지
@@ -89,6 +91,7 @@ FROM base AS production
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     curl \
+    default-libmysqlclient-dev \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 

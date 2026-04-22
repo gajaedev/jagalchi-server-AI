@@ -40,7 +40,8 @@ def _normalize_permissions(value: Any) -> frozenset[str]:
     if value is None:
         return frozenset()
     if isinstance(value, str):
-        return frozenset({value.upper()})
+        items = [item.strip().upper() for item in value.split(",") if item.strip()]
+        return frozenset(items)
     if isinstance(value, Iterable):
         items: list[str] = []
         for item in value:
@@ -48,6 +49,27 @@ def _normalize_permissions(value: Any) -> frozenset[str]:
                 items.append(item.strip().upper())
         return frozenset(items)
     return frozenset()
+
+
+def _build_gateway_user(request) -> Optional[AIAccessTokenUser]:
+    user_id = request.headers.get("X-User-ID")
+    if not user_id:
+        return None
+
+    permissions = _normalize_permissions(request.headers.get("X-Permissions"))
+    roadmap_id = request.headers.get("X-Roadmap-ID")
+
+    return AIAccessTokenUser(
+        sub=str(user_id),
+        roadmap_id=roadmap_id,
+        permissions=permissions,
+        raw_claims={
+            "sub": str(user_id),
+            "roadmapId": roadmap_id,
+            "permissions": list(permissions),
+            "source": "gateway-headers",
+        },
+    )
 
 
 class AIAccessTokenAuthentication(BaseAuthentication):
@@ -69,15 +91,23 @@ class AIAccessTokenAuthentication(BaseAuthentication):
         if not getattr(settings, "AI_AUTH_ENABLED", True):
             return None
 
+        gateway_user = _build_gateway_user(request)
+        if gateway_user is not None:
+            return (gateway_user, gateway_user.raw_claims)
+
         auth = get_authorization_header(request).split()
         if not auth:
             return None
 
         if auth[0].lower() != b"bearer":
-            raise AuthenticationFailed("Invalid authorization header. Expected Bearer token.")
+            raise AuthenticationFailed(
+                "Invalid authorization header. Expected Bearer token."
+            )
 
         if len(auth) != 2:
-            raise AuthenticationFailed("Invalid authorization header. Expected 'Bearer <token>'.")
+            raise AuthenticationFailed(
+                "Invalid authorization header. Expected 'Bearer <token>'."
+            )
 
         token = auth[1].decode("utf-8")
         secret = getattr(settings, "AI_AUTH_JWT_SECRET", "") or ""
@@ -86,7 +116,9 @@ class AIAccessTokenAuthentication(BaseAuthentication):
 
         if not secret:
             # 설정 누락은 401로 내려서 클라이언트가 "인증 필요"로 처리하게 한다.
-            raise AuthenticationFailed("Server auth misconfigured: AI_AUTH_JWT_SECRET is empty.")
+            raise AuthenticationFailed(
+                "Server auth misconfigured: AI_AUTH_JWT_SECRET is empty."
+            )
 
         try:
             payload = jwt.decode(
@@ -103,11 +135,17 @@ class AIAccessTokenAuthentication(BaseAuthentication):
 
         sub = payload.get("sub")
         if not isinstance(sub, str) or not sub.strip():
-            raise AuthenticationFailed("Invalid token payload: 'sub' must be a non-empty string.")
+            raise AuthenticationFailed(
+                "Invalid token payload: 'sub' must be a non-empty string."
+            )
 
         roadmap_id = payload.get("roadmapId") or payload.get("roadmap_id")
-        if roadmap_id is not None and (not isinstance(roadmap_id, str) or not roadmap_id.strip()):
-            raise AuthenticationFailed("Invalid token payload: 'roadmapId' must be a string when provided.")
+        if roadmap_id is not None and (
+            not isinstance(roadmap_id, str) or not roadmap_id.strip()
+        ):
+            raise AuthenticationFailed(
+                "Invalid token payload: 'roadmapId' must be a string when provided."
+            )
 
         permissions = _normalize_permissions(payload.get("permissions"))
 
@@ -144,7 +182,9 @@ class HasAIAccess(BasePermission):
 
         # 최소 권한 모델: EDIT는 READ를 포함한다고 간주
         if request.method in SAFE_METHODS:
-            return "READ" in permissions or "EDIT" in permissions or "ADMIN" in permissions
+            return (
+                "READ" in permissions or "EDIT" in permissions or "ADMIN" in permissions
+            )
         return "EDIT" in permissions or "ADMIN" in permissions
 
 
